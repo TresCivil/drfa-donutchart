@@ -32,6 +32,7 @@
     background: transparent;
     font-family: var(--font);
     -webkit-font-smoothing: antialiased;
+    overflow: hidden;
   }
 
   .card {
@@ -106,7 +107,10 @@
     padding-right: 4px;
     max-height: 100%;
     overflow-y: auto;
+    scrollbar-width: none;       /* Firefox */
+    -ms-overflow-style: none;    /* old Edge */
   }
+  .legend::-webkit-scrollbar { display: none; }  /* Chrome/Edge/Safari */
 
   .legend-item {
     display: flex;
@@ -252,7 +256,8 @@
       if (name == null || val == null) return;
       var num = typeof val === "number" ? val : parseFloat(String(val).replace(/[^0-9.\-]/g, ""));
       if (!isFinite(num)) return;
-      var key = String(name);
+      var key = String(name).trim();
+      if (!key) return;
       grouped[key] = (grouped[key] || 0) + num;
     });
     return Object.keys(grouped)
