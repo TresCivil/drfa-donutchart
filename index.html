@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Donut Chart Template</title>
+<style>
+  :root {
+    --card-bg: #ffffff;
+    --card-border: #e4e9f1;
+    --title-color: #1f2430;
+    --value-color: #17181c;
+    --label-color: #7a8394;
+    --leader-color: #9aa3b2;
+    --font: "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  body.dark {
+    --card-bg: #15171c;
+    --card-border: #2a2d35;
+    --title-color: #f2f4f8;
+    --value-color: #ffffff;
+    --label-color: #9aa3b2;
+    --leader-color: #6b7280;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    font-family: var(--font);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .card {
+    width: 100%;
+    height: 100%;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 18px 22px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--title-color);
+    letter-spacing: .1px;
+    flex: 0 0 auto;
+  }
+
+  .chart-area {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 0;
+  }
+
+  .donut-wrap {
+    flex: 1 1 60%;
+    height: 100%;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  svg { display: block; width: 100%; height: 100%; }
+
+  .center-value {
+    font-size: 23px;
+    font-weight: 700;
+    fill: var(--value-color);
+  }
+  .center-label {
+    font-size: 12px;
+    fill: var(--label-color);
+  }
+
+  .callout-text {
+    font-size: 13px;
+    font-weight: 600;
+    fill: var(--title-color);
+  }
+  .leader {
+    stroke: var(--leader-color);
+    stroke-width: 1;
+    fill: none;
+  }
+
+  .segment { transition: opacity .15s ease; cursor: default; }
+  .segments.hovering .segment { opacity: .35; }
+  .segments.hovering .segment.active { opacity: 1; }
+
+  .legend {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding-right: 4px;
+    max-height: 100%;
+    overflow-y: auto;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .legend-bar {
+    width: 5px;
+    height: 36px;
+    border-radius: 3px;
+    flex: 0 0 auto;
+  }
+
+  .legend-value {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--value-color);
+    line-height: 1.3;
+  }
+
+  .legend-name {
+    font-size: 12px;
+    color: var(--label-color);
+    line-height: 1.3;
+  }
+
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: #1f2430;
+    color: #fff;
+    font-size: 11.5px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    opacity: 0;
+    transition: opacity .12s ease;
+    white-space: nowrap;
+    z-index: 10;
+  }
+  .tooltip.show { opacity: 1; }
+
+  .empty-state {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--label-color);
+    font-size: 12.5px;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="card-title" id="chartTitle"></div>
+    <div class="chart-area" id="chartArea">
+      <div class="donut-wrap"><svg id="donutSvg"></svg></div>
+      <div class="legend" id="legend"></div>
+    </div>
+  </div>
+  <div class="tooltip" id="tooltip"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     CONFIG — edit this block to re-use the template.
+     legendField / valueField work like Power BI field wells:
+     point them at whichever columns your Power Apps data uses.
+     ============================================================ */
+  var CONFIG = {
+    title:       "Program Totaly By Category",
+    centerLabel: "Total Program Cost",
+
+    legendField: "Category",              // column used for legend labels
+    valueField:  "Value",                 // column used for the numbers
+
+    currencySymbol: "$",                  // set to "" for plain numbers
+    darkMode: false,                      // true = dark theme
+    colors:     ["#4C7DF0", "#2BB8A8", "#6D28D9", "#F5A742",
+                 "#E5484D", "#12A5B4", "#8B5CF6", "#F472B6"],
+    colorsDark: ["#2BB8A8", "#F5A742", "#F5C61A", "#4C7DF0",
+                 "#E5484D", "#12A5B4", "#A78BFA", "#F472B6"],
+
+    // Demo data — replaced when real data arrives from Power Apps
+    data: [
+      { "Category": "EW",     "Value": 233669696 },
+      { "Category": "IRW",    "Value": 23235568  },
+      { "Category": "EPA-RW", "Value": 15349235  }
+    ]
+  };
+  /* ============================================================ */
+
+  var state = {
+    title: CONFIG.title,
+    centerLabel: CONFIG.centerLabel,
+    legendField: CONFIG.legendField,
+    valueField: CONFIG.valueField,
+    darkMode: CONFIG.darkMode,
+    data: []
+  };
+
+  function activeColors() {
+    return state.darkMode ? CONFIG.colorsDark : CONFIG.colors;
+  }
+
+  // ---------- Formatting ----------
+  function fmtFull(v) {
+    return CONFIG.currencySymbol + Math.round(v).toLocaleString("en-US");
+  }
+  function fmtCompact(v) {
+    var s = CONFIG.currencySymbol;
+    if (v >= 1e9) return s + trimZero((v / 1e9).toFixed(1)) + "B";
+    if (v >= 1e6) return s + trimZero((v / 1e6).toFixed(v >= 1e7 ? 0 : 1)) + "M";
+    if (v >= 1e3) return s + trimZero((v / 1e3).toFixed(0)) + "K";
+    return s + Math.round(v);
+  }
+  function trimZero(x) { return x.replace(/\.0$/, ""); }
+
+  // ---------- Data normalisation ----------
+  // Reads the configured legendField / valueField (case-insensitive, since
+  // Power Apps JSON() lowercases field names), with generic fallbacks,
+  // and aggregates duplicate legend values.
+  function getField(row, field) {
+    if (row[field] != null) return row[field];
+    var lower = field.toLowerCase();
+    for (var k in row) {
+      if (k.toLowerCase() === lower) return row[k];
+    }
+    return null;
+  }
+
+  function normalise(rows) {
+    if (!Array.isArray(rows)) return [];
+    var grouped = {};
+    rows.forEach(function (r) {
+      if (r == null) return;
+      var name = getField(r, state.legendField);
+      if (name == null) name = r.name != null ? r.name : r.label;
+      var val = getField(r, state.valueField);
+      if (val == null) val = r.value;
+      if (name == null || val == null) return;
+      var num = typeof val === "number" ? val : parseFloat(String(val).replace(/[^0-9.\-]/g, ""));
+      if (!isFinite(num)) return;
+      var key = String(name);
+      grouped[key] = (grouped[key] || 0) + num;
+    });
+    return Object.keys(grouped)
+      .map(function (k) { return { name: k, value: grouped[k] }; })
+      .filter(function (d) { return d.value > 0; })
+      .sort(function (a, b) { return b.value - a.value; });
+  }
+
+  // ---------- SVG helpers ----------
+  var SVG_NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs) {
+    var n = document.createElementNS(SVG_NS, tag);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+  function polar(cx, cy, r, angleDeg) {
+    var a = (angleDeg - 90) * Math.PI / 180;
+    return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+  }
+  // Filled ring-sector path (flat ends, like the Figma design)
+  function ringSectorPath(cx, cy, rOuter, rInner, startDeg, endDeg) {
+    var so = polar(cx, cy, rOuter, startDeg);
+    var eo = polar(cx, cy, rOuter, endDeg);
+    var si = polar(cx, cy, rInner, startDeg);
+    var ei = polar(cx, cy, rInner, endDeg);
+    var large = (endDeg - startDeg) > 180 ? 1 : 0;
+    return [
+      "M", so.x, so.y,
+      "A", rOuter, rOuter, 0, large, 1, eo.x, eo.y,
+      "L", ei.x, ei.y,
+      "A", rInner, rInner, 0, large, 0, si.x, si.y,
+      "Z"
+    ].join(" ");
+  }
+
+  // ---------- Render ----------
+  function render() {
+    document.body.classList.toggle("dark", !!state.darkMode);
+    var svg = document.getElementById("donutSvg");
+    var legend = document.getElementById("legend");
+    document.getElementById("chartTitle").textContent = state.title;
+    svg.innerHTML = "";
+    legend.innerHTML = "";
+
+    var chartArea = document.getElementById("chartArea");
+    var oldEmpty = document.querySelector(".empty-state");
+    if (oldEmpty) oldEmpty.remove();
+    chartArea.style.display = "flex";
+
+    var data = state.data;
+    if (!data.length) {
+      chartArea.style.display = "none";
+      var emptyDiv = document.createElement("div");
+      emptyDiv.className = "empty-state";
+      emptyDiv.textContent = "Waiting for data from Power Apps…";
+      document.querySelector(".card").appendChild(emptyDiv);
+      return;
+    }
+
+    var total = data.reduce(function (s, d) { return s + d.value; }, 0);
+
+    var W = 470, H = 350;
+    var cx = W / 2, cy = H / 2 + 4;
+    var R_OUT = 122;         // outer radius
+    var THICK = 34;          // ring thickness (thick, like the Figma ring)
+    var R_IN = R_OUT - THICK;
+    var GAP_DEG = 2;         // small flat gap between segments
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+
+    var segGroup = el("g", { "class": "segments" });
+    var leaderGroup = el("g", {});
+    var labelGroup = el("g", {});
+    svg.appendChild(segGroup);
+    svg.appendChild(leaderGroup);
+    svg.appendChild(labelGroup);
+
+    var angle = 0;
+    var callouts = [];
+
+    data.forEach(function (d, i) {
+      var sweep = (d.value / total) * 360;
+      var color = activeColors()[i % activeColors().length];
+      var gap = data.length > 1 ? Math.min(GAP_DEG, sweep * 0.3) : 0;
+      var start = angle + gap / 2;
+      var end = angle + sweep - gap / 2;
+      if (end - start < 0.4) end = start + 0.4; // keep hairline slices visible
+
+      var path = el("path", {
+        d: ringSectorPath(cx, cy, R_OUT, R_IN, start, end),
+        fill: color,
+        "class": "segment"
+      });
+      path.dataset.index = i;
+      segGroup.appendChild(path);
+
+      callouts.push({
+        i: i,
+        midAngle: angle + sweep / 2,
+        text: fmtCompact(d.value),
+        name: d.name,
+        value: d.value,
+        pct: d.value / total * 100
+      });
+      angle += sweep;
+    });
+
+    // Centre text
+    var centerValue = el("text", {
+      x: cx, y: cy - 2, "text-anchor": "middle", "class": "center-value"
+    });
+    centerValue.textContent = fmtFull(total);
+    svg.appendChild(centerValue);
+
+    var centerLabel = el("text", {
+      x: cx, y: cy + 20, "text-anchor": "middle", "class": "center-label"
+    });
+    centerLabel.textContent = state.centerLabel;
+    svg.appendChild(centerLabel);
+
+    // Callouts with elbow leaders + per-side overlap avoidance
+    var left = [], right = [];
+    callouts.forEach(function (c) {
+      var a = ((c.midAngle % 360) + 360) % 360;
+      c.side = a < 180 ? "right" : "left";
+      (c.side === "right" ? right : left).push(c);
+    });
+
+    function place(list) {
+      list.forEach(function (c) {
+        var p = polar(cx, cy, R_OUT + 8, c.midAngle);
+        c.px = p.x; c.py = p.y; c.ly = p.y;
+      });
+      list.sort(function (a, b) { return a.py - b.py; });
+      var minGap = 20;
+      for (var k = 1; k < list.length; k++) {
+        if (list[k].ly - list[k - 1].ly < minGap) {
+          list[k].ly = list[k - 1].ly + minGap;
+        }
+      }
+    }
+    place(left); place(right);
+
+    callouts.forEach(function (c) {
+      var elbowLen = 22;
+      var hx = c.side === "right" ? c.px + elbowLen : c.px - elbowLen;
+      leaderGroup.appendChild(el("polyline", {
+        points: c.px + "," + c.py + " " + hx + "," + c.ly + " " +
+                (c.side === "right" ? hx + 8 : hx - 8) + "," + c.ly,
+        "class": "leader"
+      }));
+      var t = el("text", {
+        x: c.side === "right" ? hx + 12 : hx - 12,
+        y: c.ly + 4,
+        "text-anchor": c.side === "right" ? "start" : "end",
+        "class": "callout-text"
+      });
+      t.textContent = c.text;
+      labelGroup.appendChild(t);
+    });
+
+    // Legend
+    data.forEach(function (d, i) {
+      var item = document.createElement("div");
+      item.className = "legend-item";
+      item.innerHTML =
+        '<div class="legend-bar" style="background:' + activeColors()[i % activeColors().length] + '"></div>' +
+        '<div><div class="legend-value">' + fmtFull(d.value) + '</div>' +
+        '<div class="legend-name">' + escapeHtml(d.name) + '</div></div>';
+      legend.appendChild(item);
+    });
+
+    attachHover(segGroup, callouts);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  // ---------- Hover / tooltip ----------
+  function attachHover(segGroup, callouts) {
+    var tooltip = document.getElementById("tooltip");
+    segGroup.querySelectorAll(".segment").forEach(function (seg) {
+      seg.addEventListener("mousemove", function (ev) {
+        var c = callouts[+seg.dataset.index];
+        segGroup.classList.add("hovering");
+        seg.classList.add("active");
+        tooltip.innerHTML = "<strong>" + escapeHtml(c.name) + "</strong> &nbsp;" +
+          fmtFull(c.value) + " (" + c.pct.toFixed(2) + "%)";
+        tooltip.style.left = (ev.clientX + 12) + "px";
+        tooltip.style.top = (ev.clientY - 10) + "px";
+        tooltip.classList.add("show");
+      });
+      seg.addEventListener("mouseleave", function () {
+        segGroup.classList.remove("hovering");
+        seg.classList.remove("active");
+        tooltip.classList.remove("show");
+      });
+    });
+  }
+
+  // ---------- Data intake ----------
+  // A payload can override any of: title, centerLabel, legendField,
+  // valueField, data. Example:
+  //   {
+  //     "type": "chartData",
+  //     "title": "Estimated Reconstruction Cost Distribution",
+  //     "centerLabel": "Estimated Reconstruction Cost",
+  //     "legendField": "Event",
+  //     "valueField": "Total Estimated Reconstruction Cost",
+  //     "data": [ { "Event": "AGRN 1212", "Total Estimated Reconstruction Cost": 231459668 } ]
+  //   }
+  function applyPayload(payload) {
+    if (!payload) return;
+    if (typeof payload === "string") {
+      try { payload = JSON.parse(payload); } catch (e) { return; }
+    }
+    if (Array.isArray(payload)) {
+      state.data = normalise(payload);
+    } else {
+      if (payload.title)       state.title = String(payload.title);
+      if (payload.centerLabel) state.centerLabel = String(payload.centerLabel);
+      if (payload.legendField) state.legendField = String(payload.legendField);
+      if (payload.valueField)  state.valueField = String(payload.valueField);
+      var dm = payload.darkMode != null ? payload.darkMode
+             : payload.darkmode != null ? payload.darkmode : null;
+      if (dm != null) state.darkMode = (dm === true || dm === "true" || dm === 1 || dm === "1");
+      if (payload.data)        state.data = normalise(payload.data);
+    }
+    render();
+  }
+
+  // 1) postMessage from Power Apps (PCF / iframe host)
+  window.addEventListener("message", function (ev) {
+    var msg = ev.data;
+    if (msg == null) return;
+    if (typeof msg === "string") {
+      try { msg = JSON.parse(msg); } catch (e) { return; }
+    }
+    if (msg.type && msg.type !== "chartData") return;
+    applyPayload(msg);
+  });
+
+  // 2) URL query string:
+  //    ?title=...&centerLabel=...&legendField=Event&valueField=Cost&data=<urlencoded JSON>
+  function initFromQuery() {
+    try {
+      var q = new URLSearchParams(window.location.search);
+      var payload = {};
+      ["title", "centerLabel", "legendField", "valueField"].forEach(function (k) {
+        if (q.get(k)) payload[k] = q.get(k);
+      });
+      if (q.get("data")) payload.data = JSON.parse(q.get("data"));
+      if (Object.keys(payload).length) applyPayload(payload);
+    } catch (e) { /* ignore malformed query */ }
+  }
+
+  // 3) URL hash (PCF iframe pattern — Power Apps rebuilds the src with
+  //    "#" + EncodeUrl(JSON(payload)) to push new data):
+  //    https://.../index.html#%7B%22legendField%22%3A%22event%22...%7D
+  function initFromHash() {
+    try {
+      var h = window.location.hash;
+      if (!h || h.length < 2) return;
+      var decoded = decodeURIComponent(h.substring(1));
+      applyPayload(JSON.parse(decoded));
+    } catch (e) { /* ignore malformed hash */ }
+  }
+  window.addEventListener("hashchange", initFromHash);
+
+  // 4) Direct JS API
+  window.updateChart = applyPayload;
+
+  // Initial render from CONFIG
+  state.data = normalise(CONFIG.data);
+  initFromQuery();
+  initFromHash();
+  render();
+  window.addEventListener("resize", render);
+})();
+</script>
+</body>
+</html>
