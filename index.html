@@ -377,7 +377,14 @@
       callouts.push({
         i: i,
         midAngle: angle + sweep / 2,
-        text: d.callout != null ? String(d.callout) : fmtCompact(d.value),
+        text: d.callout != null
+          ? String(d.callout)
+              .replace(/\{pct0\}/g, Math.round(d.value / total * 100))
+              .replace(/\{pct2\}/g, (d.value / total * 100).toFixed(2))
+              .replace(/\{pct\}/g, trimZero((d.value / total * 100).toFixed(1)))
+              .replace(/\{value\}/g, fmtCompact(d.value))
+              .replace(/\{name\}/g, d.name)
+          : fmtCompact(d.value),
         name: d.name,
         value: d.value,
         pct: d.value / total * 100
