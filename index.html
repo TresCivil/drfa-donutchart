@@ -6,22 +6,22 @@
 <title>Donut Chart Template</title>
 <style>
   :root {
-    --card-bg: #ffffff;
-    --card-border: #e4e9f1;
-    --title-color: #1f2430;
-    --value-color: #17181c;
-    --label-color: #7a8394;
-    --leader-color: #9aa3b2;
+    --card-bg: #ffffff;          /* Menu/background */
+    --card-border: #e5e7eb;      /* grey 200 */
+    --title-color: #111827;      /* grey 900 */
+    --value-color: #111827;      /* grey 900 */
+    --label-color: #686c75;      /* Menu/text muted */
+    --leader-color: #9ca3af;     /* grey 400 */
     --font: "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif;
   }
 
   body.dark {
-    --card-bg: #15171c;
-    --card-border: #2a2d35;
-    --title-color: #f2f4f8;
+    --card-bg: #111827;          /* grey 900 */
+    --card-border: #374151;      /* grey 800 */
+    --title-color: #f3f4f6;      /* grey 100 */
     --value-color: #ffffff;
-    --label-color: #9aa3b2;
-    --leader-color: #6b7280;
+    --label-color: #9ca3af;      /* grey 400 */
+    --leader-color: #686c75;     /* grey 500 */
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -191,10 +191,12 @@
 
     currencySymbol: "$",                  // set to "" for plain numbers
     darkMode: false,                      // true = dark theme
-    colors:     ["#4C7DF0", "#2BB8A8", "#6D28D9", "#F5A742",
-                 "#E5484D", "#12A5B4", "#8B5CF6", "#F472B6"],
-    colorsDark: ["#2BB8A8", "#F5A742", "#F5C61A", "#4C7DF0",
-                 "#E5484D", "#12A5B4", "#A78BFA", "#F472B6"],
+    colors:     ["#17B751", "#93C5FD", "#FACC15", "#6366F1",
+                 "#F7630C", "#14B8A6", "#EF4444", "#5B03FF",
+                 "#0095FF", "#3EAC2E", "#F64E60", "#10B981"],
+    colorsDark: ["#17B751", "#93C5FD", "#FACC15", "#6366F1",
+                 "#F7630C", "#14B8A6", "#EF4444", "#5B03FF",
+                 "#0095FF", "#3EAC2E", "#F64E60", "#10B981"],
 
     // Demo data — replaced when real data arrives from Power Apps
     data: [
@@ -211,19 +213,27 @@
     legendField: CONFIG.legendField,
     valueField: CONFIG.valueField,
     darkMode: CONFIG.darkMode,
+    centerValue: null,       // custom centre text; null = formatted sum
+    currencySymbol: null,    // payload override; null = CONFIG value
+    colorsOverride: null,    // payload override palette
     data: []
   };
 
   function activeColors() {
+    if (state.colorsOverride && state.colorsOverride.length) return state.colorsOverride;
     return state.darkMode ? CONFIG.colorsDark : CONFIG.colors;
+  }
+
+  function currency() {
+    return state.currencySymbol != null ? state.currencySymbol : CONFIG.currencySymbol;
   }
 
   // ---------- Formatting ----------
   function fmtFull(v) {
-    return CONFIG.currencySymbol + Math.round(v).toLocaleString("en-US");
+    return currency() + Math.round(v).toLocaleString("en-US");
   }
   function fmtCompact(v) {
-    var s = CONFIG.currencySymbol;
+    var s = currency();
     if (v >= 1e9) return s + trimZero((v / 1e9).toFixed(1)) + "B";
     if (v >= 1e6) return s + trimZero((v / 1e6).toFixed(v >= 1e7 ? 0 : 1)) + "M";
     if (v >= 1e3) return s + trimZero((v / 1e3).toFixed(0)) + "K";
@@ -258,10 +268,21 @@
       if (!isFinite(num)) return;
       var key = String(name).trim();
       if (!key) return;
-      grouped[key] = (grouped[key] || 0) + num;
+      if (!grouped[key]) grouped[key] = { value: 0, legendValue: null, callout: null };
+      grouped[key].value += num;
+      var lv = getField(r, "legendValue");
+      if (lv == null) lv = getField(r, "display");
+      if (lv != null) grouped[key].legendValue = lv;
+      var co = getField(r, "callout");
+      if (co == null) co = getField(r, "label");
+      if (co != null) grouped[key].callout = co;
     });
     return Object.keys(grouped)
-      .map(function (k) { return { name: k, value: grouped[k] }; })
+      .map(function (k) {
+        return { name: k, value: grouped[k].value,
+                 legendValue: grouped[k].legendValue,
+                 callout: grouped[k].callout };
+      })
       .filter(function (d) { return d.value > 0; })
       .sort(function (a, b) { return b.value - a.value; });
   }
@@ -356,7 +377,7 @@
       callouts.push({
         i: i,
         midAngle: angle + sweep / 2,
-        text: fmtCompact(d.value),
+        text: d.callout != null ? String(d.callout) : fmtCompact(d.value),
         name: d.name,
         value: d.value,
         pct: d.value / total * 100
@@ -368,7 +389,8 @@
     var centerValue = el("text", {
       x: cx, y: cy - 2, "text-anchor": "middle", "class": "center-value"
     });
-    centerValue.textContent = fmtFull(total);
+    centerValue.textContent = state.centerValue != null
+      ? String(state.centerValue) : fmtFull(total);
     svg.appendChild(centerValue);
 
     var centerLabel = el("text", {
@@ -377,7 +399,7 @@
     centerLabel.textContent = state.centerLabel;
     svg.appendChild(centerLabel);
 
-    // Callouts with elbow leaders + per-side overlap avoidance
+    // Callouts in fixed gutters fully outside the ring, leaders reaching in
     var left = [], right = [];
     callouts.forEach(function (c) {
       var a = ((c.midAngle % 360) + 360) % 360;
@@ -385,10 +407,14 @@
       (c.side === "right" ? right : left).push(c);
     });
 
-    function place(list) {
+    var GUTTER = R_OUT + 34; // label column distance from centre
+
+    function place(list, side) {
       list.forEach(function (c) {
-        var p = polar(cx, cy, R_OUT + 8, c.midAngle);
-        c.px = p.x; c.py = p.y; c.ly = p.y;
+        var p = polar(cx, cy, R_OUT + 4, c.midAngle);
+        c.px = p.x; c.py = p.y;
+        c.lx = side === "right" ? cx + GUTTER : cx - GUTTER;
+        c.ly = p.y;
       });
       list.sort(function (a, b) { return a.py - b.py; });
       var minGap = 20;
@@ -397,19 +423,21 @@
           list[k].ly = list[k - 1].ly + minGap;
         }
       }
+      // keep labels inside the viewBox
+      list.forEach(function (c) {
+        c.ly = Math.max(14, Math.min(H - 10, c.ly));
+      });
     }
-    place(left); place(right);
+    place(left, "left"); place(right, "right");
 
     callouts.forEach(function (c) {
-      var elbowLen = 22;
-      var hx = c.side === "right" ? c.px + elbowLen : c.px - elbowLen;
+      var bend = c.side === "right" ? c.lx - 10 : c.lx + 10;
       leaderGroup.appendChild(el("polyline", {
-        points: c.px + "," + c.py + " " + hx + "," + c.ly + " " +
-                (c.side === "right" ? hx + 8 : hx - 8) + "," + c.ly,
+        points: c.px + "," + c.py + " " + bend + "," + c.ly + " " + c.lx + "," + c.ly,
         "class": "leader"
       }));
       var t = el("text", {
-        x: c.side === "right" ? hx + 12 : hx - 12,
+        x: c.side === "right" ? c.lx + 5 : c.lx - 5,
         y: c.ly + 4,
         "text-anchor": c.side === "right" ? "start" : "end",
         "class": "callout-text"
@@ -424,7 +452,10 @@
       item.className = "legend-item";
       item.innerHTML =
         '<div class="legend-bar" style="background:' + activeColors()[i % activeColors().length] + '"></div>' +
-        '<div><div class="legend-value">' + fmtFull(d.value) + '</div>' +
+        '<div><div class="legend-value">' +
+          (d.legendValue != null
+            ? (typeof d.legendValue === "number" ? fmtFull(d.legendValue) : escapeHtml(String(d.legendValue)))
+            : fmtFull(d.value)) + '</div>' +
         '<div class="legend-name">' + escapeHtml(d.name) + '</div></div>';
       legend.appendChild(item);
     });
@@ -483,6 +514,9 @@
       if (payload.centerLabel) state.centerLabel = String(payload.centerLabel);
       if (payload.legendField) state.legendField = String(payload.legendField);
       if (payload.valueField)  state.valueField = String(payload.valueField);
+      if (payload.centerValue !== undefined) state.centerValue = payload.centerValue;
+      if (payload.currencySymbol !== undefined) state.currencySymbol = payload.currencySymbol;
+      if (payload.colors !== undefined) state.colorsOverride = payload.colors;
       var dm = payload.darkMode != null ? payload.darkMode
              : payload.darkmode != null ? payload.darkmode : null;
       if (dm != null) state.darkMode = (dm === true || dm === "true" || dm === 1 || dm === "1");
