@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Donut Chart Template</title>
+<!-- DONUT_TEMPLATE_VERSION 2 (2026-07-04) -->
 <style>
   :root {
     --card-bg: #ffffff;          /* Menu/background */
@@ -49,11 +50,12 @@
 
   .card-title {
     font-size: 16px;
-    font-weight: 600;
-    color: var(--title-color);
+    font-weight: 600;              /* SemiBold */
+    color: #111827;                /* grey 900 */
     letter-spacing: .1px;
     flex: 0 0 auto;
   }
+  body.dark .card-title { color: var(--title-color); }
 
   .chart-area {
     flex: 1 1 auto;
@@ -85,7 +87,7 @@
   }
 
   .callout-text {
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 600;
     fill: var(--title-color);
   }
@@ -161,10 +163,46 @@
     color: var(--label-color);
     font-size: 12.5px;
   }
+
+  /* ---------- Loading overlay ---------- */
+  .card { position: relative; }
+  .loading {
+    position: absolute;
+    inset: 0;
+    background: var(--card-bg);
+    border-radius: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    z-index: 5;
+    opacity: 1;
+    transition: opacity .25s ease;
+  }
+  .loading.hide { opacity: 0; pointer-events: none; }
+  .spinner {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 3px solid var(--card-border);
+    border-top-color: #17B751;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text {
+    font-size: 12.5px;
+    color: var(--label-color);
+  }
 </style>
 </head>
 <body>
   <div class="card">
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading chart…</div>
+  </div>
+
     <div class="card-title" id="chartTitle"></div>
     <div class="chart-area" id="chartArea">
       <div class="donut-wrap"><svg id="donutSvg"></svg></div>
@@ -176,6 +214,18 @@
 <script>
 (function () {
   "use strict";
+  console.log("DRFA donut chart DONUT_TEMPLATE_VERSION 2");
+
+  var loadingHidden = false;
+  function hideLoading() {
+    if (loadingHidden) return;
+    loadingHidden = true;
+    var l = document.getElementById("loading");
+    if (l) l.classList.add("hide");
+  }
+  // Failsafe: never block the empty state forever if no data arrives
+  setTimeout(hideLoading, 2500);
+
 
   /* ============================================================
      CONFIG — edit this block to re-use the template.
@@ -337,6 +387,8 @@
       document.querySelector(".card").appendChild(emptyDiv);
       return;
     }
+
+    hideLoading();
 
     var total = data.reduce(function (s, d) { return s + d.value; }, 0);
 
@@ -523,7 +575,18 @@
       if (payload.valueField)  state.valueField = String(payload.valueField);
       if (payload.centerValue !== undefined) state.centerValue = payload.centerValue;
       if (payload.currencySymbol !== undefined) state.currencySymbol = payload.currencySymbol;
-      if (payload.colors !== undefined) state.colorsOverride = payload.colors;
+      if (payload.colors !== undefined) {
+        state.colorsOverride = Array.isArray(payload.colors)
+          ? payload.colors.map(function (c) {
+              if (typeof c === "string") return c;
+              if (c && typeof c === "object") {
+                // Power Apps JSON() wraps single-column tables as {Value:"#hex"}
+                return c.Value || c.value || Object.values(c)[0];
+              }
+              return null;
+            }).filter(function (c) { return typeof c === "string" && c; })
+          : null;
+      }
       var dm = payload.darkMode != null ? payload.darkMode
              : payload.darkmode != null ? payload.darkmode : null;
       if (dm != null) state.darkMode = (dm === true || dm === "true" || dm === 1 || dm === "1");
