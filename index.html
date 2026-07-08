@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Donut Chart Template</title>
-<!-- DONUT_TEMPLATE_VERSION 8 (2026-07-06) -->
+<!-- DONUT_TEMPLATE_VERSION 9 (2026-07-06) -->
 <style>
   :root {
     --card-bg: #ffffff;          /* Menu/background */
@@ -251,7 +251,7 @@
 <script>
 (function () {
   "use strict";
-  console.log("DRFA donut chart DONUT_TEMPLATE_VERSION 8");
+  console.log("DRFA donut chart DONUT_TEMPLATE_VERSION 9");
 
   var loadingHidden = false;
   function hideLoading() {
@@ -521,13 +521,42 @@
         c.lx = p.x;
         c.ly = p.y;
       });
-      list.sort(function (a, b) { return a.py - b.py; });
-      var minGap = 18;
-      for (var k = 1; k < list.length; k++) {
-        if (list[k].ly - list[k - 1].ly < minGap) {
-          list[k].ly = list[k - 1].ly + minGap;
+
+      // Split into labels above and below the centre; cascade each group
+      // away from the ring so clustered slivers staircase like Power BI.
+      var out = side === "right" ? 1 : -1;
+      var minGap = 17;
+
+      var ups = list.filter(function (c) { return c.py < cy; })
+        .sort(function (a, b) { return b.py - a.py; });   // nearest-horizontal first
+      ups.forEach(function (c, i) {
+        if (i === 0) return;
+        var prev = ups[i - 1];
+        if (prev.ly - c.ly < minGap) {
+          c.ly = prev.ly - minGap;                         // step upward
+          if (Math.abs(c.py - prev.py) < 14) {
+            c.lx = prev.lx + out * 16;                     // and outward
+          }
         }
-      }
+        if (c.ly < 14) {                                   // hit the ceiling:
+          c.ly = Math.max(14, prev.ly);                    // stay level with prev
+          c.lx = prev.lx + out * 52;                       // and escape sideways
+        }
+      });
+
+      var downs = list.filter(function (c) { return c.py >= cy; })
+        .sort(function (a, b) { return a.py - b.py; });
+      downs.forEach(function (c, i) {
+        if (i === 0) return;
+        var prev = downs[i - 1];
+        if (c.ly - prev.ly < minGap) {
+          c.ly = prev.ly + minGap;                         // step downward
+          if (Math.abs(c.py - prev.py) < 14) {
+            c.lx = prev.lx + out * 16;                     // and outward
+          }
+        }
+      });
+
       // keep labels inside the viewBox
       list.forEach(function (c) {
         c.ly = Math.max(14, Math.min(H - 10, c.ly));
