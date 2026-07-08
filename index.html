@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Donut Chart Template</title>
-<!-- DONUT_TEMPLATE_VERSION 9 (2026-07-06) -->
+<!-- DONUT_TEMPLATE_VERSION 14 (2026-07-06) -->
 <style>
   :root {
     --card-bg: #ffffff;          /* Menu/background */
@@ -251,7 +251,7 @@
 <script>
 (function () {
   "use strict";
-  console.log("DRFA donut chart DONUT_TEMPLATE_VERSION 9");
+  console.log("DRFA donut chart DONUT_TEMPLATE_VERSION 14");
 
   var loadingHidden = false;
   function hideLoading() {
@@ -512,100 +512,110 @@
       (c.side === "right" ? right : left).push(c);
     });
 
-    var LABEL_DIST = 26;     // how far beyond the ring the labels float
+    var AXIS_MIN = 24;   // minimum axis-aligned run leaving the ring
+    var DIAG_MIN = 12;   // minimum 45-degree diagonal arriving at the label
 
     function place(list, side) {
+      var out = side === "right" ? 1 : -1;
       list.forEach(function (c) {
-        var p = polar(cx, cy, R_OUT + LABEL_DIST, c.midAngle);
+        var A = polar(cx, cy, R_OUT + 4, c.midAngle);
+        c.ax = A.x; c.ay = A.y;
+        var p = polar(cx, cy, R_OUT + 30, c.midAngle);
         c.px = p.x; c.py = p.y;
-        c.lx = p.x;
-        c.ly = p.y;
+        var a = ((c.midAngle % 360) + 360) % 360;
+        c.vertical = a < 25 || a > 335;
+        // vertical leaders need headroom above the ring for the axis run;
+        // clamp BEFORE stacking so the stack still separates the labels
+        c.ly = c.vertical
+          ? Math.min(p.y, c.ay - (AXIS_MIN * 0.6) - DIAG_MIN)
+          : p.y;
       });
 
-      // Split into labels above and below the centre; cascade each group
-      // away from the ring so clustered slivers staircase like Power BI.
-      var out = side === "right" ? 1 : -1;
+      // Monotone vertical stacks (label order = anchor order: no crossings)
       var minGap = 17;
-
       var ups = list.filter(function (c) { return c.py < cy; })
-        .sort(function (a, b) { return b.py - a.py; });   // nearest-horizontal first
+        .sort(function (a, b) { return b.py - a.py; });
       ups.forEach(function (c, i) {
         if (i === 0) return;
-        var prev = ups[i - 1];
-        if (prev.ly - c.ly < minGap) {
-          c.ly = prev.ly - minGap;                         // step upward
-          if (Math.abs(c.py - prev.py) < 14) {
-            c.lx = prev.lx + out * 16;                     // and outward
-          }
-        }
-        if (c.ly < 14) {                                   // hit the ceiling:
-          c.ly = Math.max(14, prev.ly);                    // stay level with prev
-          c.lx = prev.lx + out * 52;                       // and escape sideways
-        }
+        c.ly = Math.min(c.ly, ups[i - 1].ly - minGap);
       });
-
+      if (ups.length) {
+        var topDeficit = 14 - ups[ups.length - 1].ly;
+        if (topDeficit > 0) ups.forEach(function (c) { c.ly += topDeficit; });
+      }
       var downs = list.filter(function (c) { return c.py >= cy; })
         .sort(function (a, b) { return a.py - b.py; });
       downs.forEach(function (c, i) {
         if (i === 0) return;
-        var prev = downs[i - 1];
-        if (c.ly - prev.ly < minGap) {
-          c.ly = prev.ly + minGap;                         // step downward
-          if (Math.abs(c.py - prev.py) < 14) {
-            c.lx = prev.lx + out * 16;                     // and outward
-          }
-        }
+        c.ly = Math.max(c.ly, downs[i - 1].ly + minGap);
       });
+      if (downs.length) {
+        var botDeficit = downs[downs.length - 1].ly - (H - 24);
+        if (botDeficit > 0) downs.forEach(function (c) { c.ly -= botDeficit; });
+      }
 
-      // keep labels inside the viewBox
+      // Derive lx from the leader geometry so the bend is always visible
       list.forEach(function (c) {
-        c.ly = Math.max(14, Math.min(H - 10, c.ly));
-        c.lx = side === "right" ? Math.min(c.lx, W - 54) : Math.max(c.lx, 54);
+        if (c.vertical) {
+          // vertical run up from the ring, then 45-degree diagonal to the label
+          c.lx = c.ax + out * DIAG_MIN;
+        } else {
+          // ensure a real diagonal, pointing away from the ring's middle
+          var dy = c.ly - c.ay;
+          if (Math.abs(dy) < DIAG_MIN) {
+            c.ly = c.ay + (c.py >= cy ? DIAG_MIN : -DIAG_MIN);
+            dy = c.ly - c.ay;
+          }
+          // horizontal run from the ring, then 45-degree diagonal to the label
+          c.lx = c.ax + out * (Math.abs(dy) + AXIS_MIN);
+        }
+        // keep inside the card
+        c.ly = Math.max(12, Math.min(H - 8, c.ly));
+        c.lx = side === "right" ? Math.min(c.lx, W - 44) : Math.max(c.lx, 44);
       });
     }
     place(left, "left"); place(right, "right");
 
-    if (state.showCallouts !== false) callouts.forEach(function (c) {
-      var p0 = polar(cx, cy, R_OUT + 4, c.midAngle);
-      var a = ((c.midAngle % 360) + 360) % 360;
-      var bottom = a > 135 && a < 225;   // label sits below the ring
-
-      if (bottom) {
-        // Figma bottom label: diagonal, then a short VERTICAL drop; text centred below
-        c.ly = Math.min(c.ly, H - 24);
-        c.lx = Math.max(40, Math.min(W - 40, c.lx));
-        leaderGroup.appendChild(el("polyline", {
-          points: p0.x + "," + p0.y + " " + c.lx + "," + (c.ly - 8) + " " +
-                  c.lx + "," + c.ly,
-          "class": "leader",
-          "stroke-linejoin": "round",
-          "stroke-linecap": "round"
-        }));
-        var tb = el("text", {
-          x: c.lx, y: c.ly + 16,
-          "text-anchor": "middle",
-          "class": "callout-text"
-        });
-        tb.textContent = c.text;
-        labelGroup.appendChild(tb);
+    // Figma vector leaders: an axis-aligned run leaving the ring
+    // (vertical for top segments, horizontal otherwise) joined to a
+    // true 45-degree diagonal arriving at the label.
+    function leaderPoints(A, lx, ly, vertical) {
+      if (vertical) {
+        var dx = Math.abs(lx - A.x);
+        var By = ly + (ly < A.y ? dx : -dx);
+        // under crowding, shorten the axis run (diagonal steepens) but keep the bend
+        By = ly < A.y ? Math.min(By, A.y - 3) : Math.max(By, A.y + 3);
+        var hasRoom = ly < A.y ? (By > ly + 2) : (By < ly - 2);
+        if (hasRoom) return A.x + "," + A.y + " " + A.x + "," + By + " " + lx + "," + ly;
       } else {
-        // Side/top label: diagonal, then a short HORIZONTAL stub into the text
-        var bend = c.side === "right" ? c.lx - 14 : c.lx + 14;
-        leaderGroup.appendChild(el("polyline", {
-          points: p0.x + "," + p0.y + " " + bend + "," + c.ly + " " + c.lx + "," + c.ly,
-          "class": "leader",
-          "stroke-linejoin": "round",
-          "stroke-linecap": "round"
-        }));
-        var t = el("text", {
-          x: c.side === "right" ? c.lx + 4 : c.lx - 4,
-          y: c.ly + 4,
-          "text-anchor": c.side === "right" ? "start" : "end",
-          "class": "callout-text"
-        });
-        t.textContent = c.text;
-        labelGroup.appendChild(t);
+        var dy = Math.abs(ly - A.y);
+        var Bx = lx + (lx < A.x ? dy : -dy);
+        Bx = lx < A.x ? Math.min(Bx, A.x - 3) : Math.max(Bx, A.x + 3);
+        var hasRoom2 = lx < A.x ? (Bx > lx + 2) : (Bx < lx - 2);
+        if (hasRoom2) return A.x + "," + A.y + " " + Bx + "," + A.y + " " + lx + "," + ly;
       }
+      return A.x + "," + A.y + " " + lx + "," + ly;   // genuinely no room: single diagonal
+    }
+
+    if (state.showCallouts !== false) callouts.forEach(function (c) {
+      var A = polar(cx, cy, R_OUT + 4, c.midAngle);
+      var a = ((c.midAngle % 360) + 360) % 360;
+      var vertical = a < 25 || a > 335;               // top zone: vertical into the ring
+      var endX = c.side === "right" ? c.lx - 4 : c.lx + 4;
+      leaderGroup.appendChild(el("polyline", {
+        points: leaderPoints(A, endX, c.ly, vertical),
+        "class": "leader",
+        "stroke-linejoin": "round",
+        "stroke-linecap": "round"
+      }));
+      var t = el("text", {
+        x: c.side === "right" ? c.lx + 2 : c.lx - 2,
+        y: c.ly + 4,
+        "text-anchor": c.side === "right" ? "start" : "end",
+        "class": "callout-text"
+      });
+      t.textContent = c.text;
+      labelGroup.appendChild(t);
     });
 
     // Legend
