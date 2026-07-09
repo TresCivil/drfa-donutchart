@@ -3,27 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Clustered Column Chart Template</title>
-<!-- CLUSTERED_TEMPLATE_VERSION 3 (2026-07-08) -->
+<title>Donut Chart Template</title>
+<!-- DONUT_TEMPLATE_VERSION 21 (2026-07-08) -->
 <style>
   :root {
-    --card-bg: #ffffff;
+    --card-bg: #ffffff;          /* Menu/background */
     --card-border: #e5e7eb;      /* grey 200 */
     --title-color: #111827;      /* grey 900 */
-    --value-color: #111827;
+    --value-color: #111827;      /* grey 900 */
     --label-color: #686c75;      /* Menu/text muted */
-    --baseline: #e5e7eb;
+    --leader-color: #9ca3af;     /* grey 400 */
     --font: "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif;
-    --radius-xl: 12px;
   }
 
   body.dark {
-    --card-bg: #111827;
-    --card-border: #374151;
-    --title-color: #f3f4f6;
+    --card-bg: #111827;          /* grey 900 */
+    --card-border: #374151;      /* grey 800 */
+    --title-color: #f3f4f6;      /* grey 100 */
     --value-color: #ffffff;
-    --label-color: #9ca3af;
-    --baseline: #374151;
+    --label-color: #9ca3af;      /* grey 400 */
+    --leader-color: #686c75;     /* grey 500 */
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -38,13 +37,12 @@
   }
 
   .card {
-    position: relative;
     width: 100%;
     height: 100%;
     background: var(--card-bg);
     border: 1px solid var(--card-border);
-    border-radius: var(--radius-xl);
-    padding: 16px 20px 12px;
+    border-radius: 14px;
+    padding: 18px 22px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -52,126 +50,150 @@
 
   .card-title {
     font-size: var(--fs-title, 16px);
-    font-weight: 600;
-    color: #111827;
-    margin-bottom: 10px;
+    font-weight: 600;              /* SemiBold */
+    color: #111827;                /* grey 900 */
+    letter-spacing: .1px;
     flex: 0 0 auto;
   }
   body.dark .card-title { color: var(--title-color); }
 
-  .content {
+  .chart-area {
     flex: 1 1 auto;
-    min-height: 0;
     display: flex;
-    flex-direction: column;
-  }
-  .main {
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  .content.legend-right {
-    flex-direction: row;
-    align-items: stretch;      /* let the plot keep its full height */
-    gap: 22px;
-  }
-  .content.legend-right .legend {
-    flex-direction: column;
-    justify-content: center;
-    align-items: flex-start;
-    align-self: center;        /* legend itself stays vertically centred */
-    gap: 10px;
-    padding-top: 0;
-  }
-
-  .plot {
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    align-items: stretch;
-    justify-content: space-around;
-    gap: 18px;
-    border-bottom: 2px solid var(--baseline);
-    padding: 0 6px;
-  }
-
-  .group {
-    flex: 1 1 0;
-    min-width: 0;
-    max-width: 180px;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    gap: 6px;
-  }
-
-  .colwrap {
-    flex: 1 1 0;
-    min-width: 10px;
-    max-width: 64px;
-    display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: flex-end;
-    height: 100%;
+    justify-content: center;
+    gap: 28px;
+    min-height: 0;
   }
 
-  .col-value {
-    font-size: var(--fs-value, 12.5px);
-    font-weight: 600;
-    color: var(--value-color);
-    white-space: nowrap;
-    margin-bottom: 4px;
+  /* compact (no-callout) layout: donut and legend sit together, Figma type-2 style */
+  .chart-area.compact {
+    gap: 28px;
+    justify-content: center;
   }
-
-  .col {
-    width: 100%;
-    border-radius: 4px 4px 0 0;   /* Figma radius token s on top corners */
-    transition: opacity .15s ease;
-    cursor: default;
-  }
-  .plot.hovering .col { opacity: .4; }
-  .plot.hovering .col.active { opacity: 1; }
-
-  .cats {
+  .chart-area.compact .donut-wrap {
     flex: 0 0 auto;
-    display: flex;
-    justify-content: space-around;
-    gap: 18px;
-    padding: 6px 6px 0;
   }
-  .cat-label {
-    flex: 1 1 0;
+  .chart-area.compact .legend {
+    flex: 1 1 auto;
     min-width: 0;
-    max-width: 180px;
-    text-align: center;
-    font-size: var(--fs-axis, 12.5px);
-    color: var(--label-color);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    max-width: 340px;
   }
+
+  .donut-wrap {
+    flex: 0 1 auto;
+    height: 100%;
+    aspect-ratio: 470 / 350;   /* set per-type at render time */
+    max-width: 62%;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  svg { display: block; width: 100%; height: 100%; }
+
+  .center-value {
+    font-size: var(--fs-center-value, 23px);
+    font-weight: 700;
+    fill: var(--value-color);
+  }
+  .center-label {
+    font-size: var(--fs-center-label, 12px);
+    fill: var(--label-color);
+  }
+
+  .callout-text {
+    font-size: var(--fs-callout, 15px);
+    font-weight: 600;
+    fill: var(--title-color);
+  }
+  .leader {
+    stroke: var(--value-color);   /* dark like the label text, per Figma */
+    stroke-width: 1.6;
+    fill: none;
+  }
+
+  .segment { transition: opacity .15s ease; cursor: default; }
+  .segments.hovering .segment { opacity: .35; }
+  .segments.hovering .segment.active { opacity: 1; }
 
   .legend {
     flex: 0 0 auto;
     display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 6px 18px;
-    padding-top: 8px;
+    flex-direction: column;
+    gap: 18px;
+    padding-right: 4px;
+    max-height: 100%;
+    overflow-y: auto;
+    scrollbar-width: none;       /* Firefox */
+    -ms-overflow-style: none;    /* old Edge */
   }
+  .legend::-webkit-scrollbar { display: none; }  /* Chrome/Edge/Safari */
+
   .legend-item {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: var(--fs-legend, 12.5px);
-    color: var(--title-color);
+    gap: 10px;
   }
-  .legend-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
+
+  .legend-bar {
+    width: 5px;
+    height: 36px;
+    border-radius: 3px;
+    flex: 0 0 auto;
+  }
+
+  .legend-value {
+    font-size: var(--fs-legend-value, 14.5px);
+    font-weight: 700;
+    color: var(--value-color);
+    line-height: 1.3;
+  }
+
+  .legend-name {
+    font-size: var(--fs-legend-name, 12px);
+    color: var(--label-color);
+    line-height: 1.3;
+  }
+
+  /* legendStyle: "table" — Type/% header with dot rows */
+  .legend.table-style { gap: 0; min-width: 190px; }
+  .legend.table-style .legend-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--title-color);
+    padding: 4px 2px 8px;
+    border-bottom: 1px solid var(--card-border);
+    margin-bottom: 6px;
+  }
+  .legend.table-style .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 2px;
+  }
+  .legend.table-style .legend-dot {
+    width: 11px; height: 11px; border-radius: 50%;
+    flex: 0 0 auto;
+  }
+  .legend.table-style .legend-tname {
+    flex: 1 1 auto;
+    font-size: var(--fs-legend-name, 12.5px);
+    color: var(--title-color);
+    white-space: normal;
+    line-height: 1.3;
+    min-width: 0;
+  }
+  .legend.table-style .legend-item { align-items: flex-start; }
+  .legend.table-style .legend-dot { margin-top: 3px; }
+  .legend.table-style .legend-tvalue {
+    flex: 0 0 auto;
+    font-size: var(--fs-legend-value, 12.5px);
+    font-weight: 600;
+    color: var(--value-color);
   }
 
   .tooltip {
@@ -199,6 +221,7 @@
   }
 
   /* ---------- Loading overlay ---------- */
+  .card { position: relative; }
   .loading {
     position: absolute;
     inset: 0;
@@ -223,30 +246,22 @@
     animation: spin .8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text { font-size: 12.5px; color: var(--label-color); }
-
-  @media (max-width: 420px) {
-    .card { padding: 12px 14px 10px; }
-    .card-title { font-size: 14px; }
-    .col-value { font-size: 10.5px; }
-    .cat-label, .legend-item { font-size: 11px; }
-    .plot, .cats { gap: 10px; }
-    .group { gap: 4px; }
+  .loading-text {
+    font-size: 12.5px;
+    color: var(--label-color);
   }
 </style>
 </head>
 <body>
   <div class="card">
-    <div class="loading" id="loading">
-      <div class="spinner"></div>
-      <div class="loading-text">Loading chart…</div>
-    </div>
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading chart…</div>
+  </div>
+
     <div class="card-title" id="chartTitle"></div>
-    <div class="content" id="content">
-      <div class="main">
-        <div class="plot" id="plot"></div>
-        <div class="cats" id="cats"></div>
-      </div>
+    <div class="chart-area" id="chartArea">
+      <div class="donut-wrap"><svg id="donutSvg"></svg></div>
       <div class="legend" id="legend"></div>
     </div>
   </div>
@@ -255,7 +270,7 @@
 <script>
 (function () {
   "use strict";
-  console.log("DRFA clustered column CLUSTERED_TEMPLATE_VERSION 3");
+  console.log("DRFA donut chart DONUT_TEMPLATE_VERSION 21");
 
   var loadingHidden = false;
   function hideLoading() {
@@ -264,93 +279,74 @@
     var l = document.getElementById("loading");
     if (l) l.classList.add("hide");
   }
+  // Failsafe: never block the empty state forever if no data arrives
   setTimeout(hideLoading, 2500);
 
+
   /* ============================================================
-     CONFIG — all overridable per chart via the payload.
-     Data rows: { category, series, value } (long format, like the
-     stacked bar template). Duplicate category+series pairs are summed.
+     CONFIG — edit this block to re-use the template.
+     legendField / valueField work like Power BI field wells:
+     point them at whichever columns your Power Apps data uses.
      ============================================================ */
   var CONFIG = {
-    title: "EW Category Expenditure",
-    categoryField: "category",
-    seriesField: "series",
-    valueField: "value",
-    currencySymbol: "$",
-    darkMode: false,
-    showLegend: true,
-    legendPosition: "bottom", // "bottom" (Figma) | "right"
-    valueLabels: "compact",   // "compact" | "full" | "none"
-    maxValue: null,           // null = auto from data
+    title:       "Program Totaly By Category",
+    centerLabel: "Total Program Cost",
 
-    // Named series colours (case-insensitive); extras rotate the palette
+    legendField: "Category",              // column used for legend labels
+    valueField:  "Value",                 // column used for the numbers
+
+    currencySymbol: "$",                  // set to "" for plain numbers
+    showCallouts: true,                   // false = clean ring, no outside labels
+    legendStyle: "bars",                  // "bars" | "table" (Type/% header with dots)
+    legendTitle: "Type",
+    legendValueTitle: "%",
+    darkMode: false,                      // true = dark theme
+    // Reserved category colours (exact name match, case-insensitive, trimmed)
     seriesColors: {
-      "Actuals":     "#5FBF77",
-      "Commitments": "#118E3F",
-      "EW":     "rgba(59, 130, 246, 1)",
-      "IRW":    "rgba(20, 184, 166, 1)",
-      "EPAR":   "rgba(91, 3, 255, 1)",
+      "EW":     "rgba(59, 130, 246, 1)",   /* accent/blue-vibrant-3 #3B82F6 */
+      "IRW":    "rgba(20, 184, 166, 1)",   /* accent/teal #14B8A6 */
+      "EPAR":   "rgba(91, 3, 255, 1)",     /* accent/violet #5B03FF */
       "EPA-RW": "rgba(91, 3, 255, 1)"
     },
-    seriesOrder: null,        // e.g. ["Actuals", "Commitments"]; null = first-seen
-    accentPalette: ["#17B751", "#FACC15", "#F7630C", "#6366F1",
-                    "#EF4444", "#10B981", "#0095FF", "#F64E60",
-                    "#3EAC2E", "#118E3F", "#93C5FD", "#7125EB"],
+    // Fallback rotation: Figma accent palette excluding the three reserved colours
+    colors:     ["#17B751", "#FACC15", "#F7630C", "#6366F1",
+                 "#EF4444", "#10B981", "#0095FF", "#F64E60",
+                 "#3EAC2E", "#118E3F", "#93C5FD", "#7125EB"],
+    colorsDark: ["#17B751", "#FACC15", "#F7630C", "#6366F1",
+                 "#EF4444", "#10B981", "#0095FF", "#F64E60",
+                 "#3EAC2E", "#118E3F", "#93C5FD", "#7125EB"],
 
+    // Demo data — replaced when real data arrives from Power Apps
     data: [
-      { category: "EW",     series: "Actuals",     value: 33000000 },
-      { category: "EW",     series: "Commitments", value: 1000000 },
-      { category: "IRW",    series: "Actuals",     value: 14000000 },
-      { category: "IRW",    series: "Commitments", value: 1000000 },
-      { category: "EPA-RW", series: "Actuals",     value: 2000000 },
-      { category: "EPA-RW", series: "Commitments", value: 1000000 }
+      { "Category": "EW",     "Value": 233669696 },
+      { "Category": "IRW",    "Value": 23235568  },
+      { "Category": "EPA-RW", "Value": 15349235  }
     ]
   };
   /* ============================================================ */
 
   var state = {
     title: CONFIG.title,
-    categoryField: CONFIG.categoryField,
-    seriesField: CONFIG.seriesField,
+    centerLabel: CONFIG.centerLabel,
+    legendField: CONFIG.legendField,
     valueField: CONFIG.valueField,
-    currencySymbol: CONFIG.currencySymbol,
     darkMode: CONFIG.darkMode,
-    showLegend: CONFIG.showLegend,
-    legendPosition: CONFIG.legendPosition,
-    valueLabels: CONFIG.valueLabels,
-    maxValue: CONFIG.maxValue,
-    seriesColors: null,
-    seriesOrder: null,
-    categoryOrder: null,
-    fontSizes: null,
-    background: null,
+    centerValue: null,       // custom centre text; null = formatted sum
+    showCallouts: CONFIG.showCallouts,
+    legendStyle: CONFIG.legendStyle,
+    legendTitle: CONFIG.legendTitle,
+    legendValueTitle: CONFIG.legendValueTitle,
+    fontSizes: null,   // {title, centerValue, centerLabel, callout, legendValue, legendName} in px
+    currencySymbol: null,    // payload override; null = CONFIG value
+    colorsOverride: null,    // payload override palette
+    seriesColors: null,      // payload name->colour map (or [{name,color}] table)
+    background: null,        // {light, dark, borderLight, borderDark} card colour overrides
     data: []
   };
 
-  // ---------- helpers ----------
-  function getField(row, field) {
-    if (row[field] != null) return row[field];
-    var lower = String(field).toLowerCase();
-    for (var k in row) {
-      if (k.toLowerCase() === lower) return row[k];
-    }
-    return null;
-  }
-  function fmtFull(v) {
-    return state.currencySymbol + Math.round(v).toLocaleString("en-US");
-  }
-  function fmtCompact(v) {
-    var s = state.currencySymbol;
-    if (v >= 1e9) return s + trim((v / 1e9).toFixed(1)) + "B";
-    if (v >= 1e6) return s + trim((v / 1e6).toFixed(v >= 1e7 ? 0 : 1)) + "M";
-    if (v >= 1e3) return s + trim((v / 1e3).toFixed(0)) + "K";
-    return s + Math.round(v);
-  }
-  function trim(x) { return String(x).replace(/\.0$/, ""); }
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, function (c) {
-      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
-    });
+  function activeColors() {
+    if (state.colorsOverride && state.colorsOverride.length) return state.colorsOverride;
+    return state.darkMode ? CONFIG.colorsDark : CONFIG.colors;
   }
 
   function namedColor(name) {
@@ -362,10 +358,11 @@
     }
     return null;
   }
-  function colorFor(name, i) {
-    return namedColor(name) ||
-      CONFIG.accentPalette[i % CONFIG.accentPalette.length];
+
+  function colorFor(d, i) {
+    return namedColor(d.name) || activeColors()[i % activeColors().length];
   }
+
   function resolveSeriesColors(raw) {
     if (!raw) return null;
     if (Array.isArray(raw)) {
@@ -381,17 +378,35 @@
     if (typeof raw === "object") return raw;
     return null;
   }
-  function resolveStringArray(raw) {
-    if (!Array.isArray(raw)) return null;
-    var out = raw.map(function (item) {
-      if (typeof item === "string") return item;
-      if (item && typeof item === "object") {
-        var v = item.Value || item.value || Object.values(item)[0];
-        return v != null ? String(v) : null;
-      }
-      return null;
-    }).filter(function (x) { return x; });
-    return out.length ? out : null;
+
+  function currency() {
+    return state.currencySymbol != null ? state.currencySymbol : CONFIG.currencySymbol;
+  }
+
+  // ---------- Formatting ----------
+  function fmtFull(v) {
+    return currency() + Math.round(v).toLocaleString("en-US");
+  }
+  function fmtCompact(v) {
+    var s = currency();
+    if (v >= 1e9) return s + trimZero((v / 1e9).toFixed(1)) + "B";
+    if (v >= 1e6) return s + trimZero((v / 1e6).toFixed(v >= 1e7 ? 0 : 1)) + "M";
+    if (v >= 1e3) return s + trimZero((v / 1e3).toFixed(0)) + "K";
+    return s + Math.round(v);
+  }
+  function trimZero(x) { return x.replace(/\.0$/, ""); }
+
+  // ---------- Data normalisation ----------
+  // Reads the configured legendField / valueField (case-insensitive, since
+  // Power Apps JSON() lowercases field names), with generic fallbacks,
+  // and aggregates duplicate legend values.
+  function getField(row, field) {
+    if (row[field] != null) return row[field];
+    var lower = field.toLowerCase();
+    for (var k in row) {
+      if (k.toLowerCase() === lower) return row[k];
+    }
+    return null;
   }
 
   function normalise(rows) {
@@ -399,160 +414,399 @@
     var grouped = {};
     rows.forEach(function (r) {
       if (r == null) return;
-      var cat = getField(r, state.categoryField);
-      var ser = getField(r, state.seriesField);
+      var name = getField(r, state.legendField);
+      if (name == null) name = r.name != null ? r.name : r.label;
       var val = getField(r, state.valueField);
-      if (cat == null || val == null) return;
+      if (val == null) val = r.value;
+      if (name == null || val == null) return;
       var num = typeof val === "number" ? val : parseFloat(String(val).replace(/[^0-9.\-]/g, ""));
       if (!isFinite(num)) return;
-      var ck = String(cat).trim();
-      if (!ck) return;
-      var sk = ser == null ? "Value" : String(ser).trim() || "Value";
-      var key = ck + "\u0000" + sk;
-      grouped[key] = (grouped[key] || 0) + num;
+      var key = String(name).trim();
+      if (!key) return;
+      if (!grouped[key]) grouped[key] = { value: 0, legendValue: null, callout: null };
+      grouped[key].value += num;
+      var lv = getField(r, "legendValue");
+      if (lv == null) lv = getField(r, "display");
+      if (lv != null) grouped[key].legendValue = lv;
+      var co = getField(r, "callout");
+      if (co == null) co = getField(r, "label");
+      if (co != null) grouped[key].callout = co;
     });
-    return Object.keys(grouped).map(function (k) {
-      var parts = k.split("\u0000");
-      return { category: parts[0], series: parts[1], value: grouped[k] };
-    });
+    return Object.keys(grouped)
+      .map(function (k) {
+        return { name: k, value: grouped[k].value,
+                 legendValue: grouped[k].legendValue,
+                 callout: grouped[k].callout };
+      })
+      .filter(function (d) { return d.value > 0; })
+      .sort(function (a, b) { return b.value - a.value; });
   }
 
-  // ---------- render ----------
+  // ---------- SVG helpers ----------
+  var SVG_NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs) {
+    var n = document.createElementNS(SVG_NS, tag);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+  function polar(cx, cy, r, angleDeg) {
+    var a = (angleDeg - 90) * Math.PI / 180;
+    return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+  }
+  // Filled ring-sector path (flat ends, like the Figma design)
+  function ringSectorPath(cx, cy, rOuter, rInner, startDeg, endDeg) {
+    var so = polar(cx, cy, rOuter, startDeg);
+    var eo = polar(cx, cy, rOuter, endDeg);
+    var si = polar(cx, cy, rInner, startDeg);
+    var ei = polar(cx, cy, rInner, endDeg);
+    var large = (endDeg - startDeg) > 180 ? 1 : 0;
+    return [
+      "M", so.x, so.y,
+      "A", rOuter, rOuter, 0, large, 1, eo.x, eo.y,
+      "L", ei.x, ei.y,
+      "A", rInner, rInner, 0, large, 0, si.x, si.y,
+      "Z"
+    ].join(" ");
+  }
+
+  // ---------- Render ----------
   function render() {
     document.body.classList.toggle("dark", !!state.darkMode);
-
-    // background overrides
     var bg = state.background || {};
-    var bgVal = state.darkMode ? getField(bg, "dark") : getField(bg, "light");
-    var borderVal = state.darkMode ? getField(bg, "borderDark") : getField(bg, "borderLight");
+    var bgVal = state.darkMode
+      ? (getField(bg, "dark") || null)
+      : (getField(bg, "light") || null);
+    var borderVal = state.darkMode
+      ? (getField(bg, "borderDark") || null)
+      : (getField(bg, "borderLight") || null);
     if (bgVal) document.documentElement.style.setProperty("--card-bg", String(bgVal));
     else document.documentElement.style.removeProperty("--card-bg");
     if (borderVal) document.documentElement.style.setProperty("--card-border", String(borderVal));
     else document.documentElement.style.removeProperty("--card-border");
-
-    // font size overrides
-    var fsMap = { title: "--fs-title", value: "--fs-value",
-                  axis: "--fs-axis", legend: "--fs-legend" };
+    var fsMap = { title: "--fs-title", centerValue: "--fs-center-value",
+                  centerLabel: "--fs-center-label", callout: "--fs-callout",
+                  legendValue: "--fs-legend-value", legendName: "--fs-legend-name" };
     for (var fk in fsMap) {
       var fv = state.fontSizes ? getField(state.fontSizes, fk) : null;
-      if (fv != null && +fv > 0)
+      if (fv != null && +fv > 0) {
         document.documentElement.style.setProperty(fsMap[fk], (+fv) + "px");
-      else
+      } else {
         document.documentElement.style.removeProperty(fsMap[fk]);
+      }
     }
-
-    document.getElementById("chartTitle").textContent = state.title;
-    document.getElementById("content").classList.toggle("legend-right",
-      state.legendPosition === "right");
-    var plot = document.getElementById("plot");
-    var cats = document.getElementById("cats");
+    var svg = document.getElementById("donutSvg");
     var legend = document.getElementById("legend");
-    plot.innerHTML = ""; cats.innerHTML = ""; legend.innerHTML = "";
+    document.getElementById("chartTitle").textContent = state.title;
+    svg.innerHTML = "";
+    legend.innerHTML = "";
 
-    var old = document.querySelector(".empty-state");
-    if (old) old.remove();
-    plot.style.display = ""; cats.style.display = ""; legend.style.display = "";
+    var chartArea = document.getElementById("chartArea");
+    chartArea.classList.toggle("compact", state.showCallouts === false);
+    var oldEmpty = document.querySelector(".empty-state");
+    if (oldEmpty) oldEmpty.remove();
+    chartArea.style.display = "flex";
 
     var data = state.data;
     if (!data.length) {
-      plot.style.display = "none"; cats.style.display = "none"; legend.style.display = "none";
-      var e = document.createElement("div");
-      e.className = "empty-state";
-      e.textContent = "Waiting for data from Power Apps…";
-      document.querySelector(".card").appendChild(e);
+      chartArea.style.display = "none";
+      var emptyDiv = document.createElement("div");
+      emptyDiv.className = "empty-state";
+      emptyDiv.textContent = "Waiting for data from Power Apps…";
+      document.querySelector(".card").appendChild(emptyDiv);
       return;
     }
 
     hideLoading();
 
-    // categories and series, in order
-    var catSeen = [], serSeen = [];
-    data.forEach(function (d) {
-      if (catSeen.indexOf(d.category) < 0) catSeen.push(d.category);
-      if (serSeen.indexOf(d.series) < 0) serSeen.push(d.series);
+    var total = data.reduce(function (s, d) { return s + d.value; }, 0);
+
+    var compact = state.showCallouts === false;   // no callout gutters needed
+    // Same height and radius in both types => equal on-screen ring size.
+    // 0.80 of height is the largest ring type 1's callout labels allow;
+    // both types use it so side-by-side cards match.
+    var W = compact ? 350 : 470, H = 350;
+    var cx = W / 2, cy = H / 2;
+    var R_OUT = 140;
+    document.getElementById("donutSvg").parentNode.style.aspectRatio =
+      compact ? "1 / 1" : "470 / 350";
+    var THICK = 34;          // ring thickness (thick, like the Figma ring)
+    var R_IN = R_OUT - THICK;
+    var GAP_DEG = 2;         // small flat gap between segments
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+
+    var segGroup = el("g", { "class": "segments" });
+    var leaderGroup = el("g", {});
+    var labelGroup = el("g", {});
+    svg.appendChild(segGroup);
+    svg.appendChild(leaderGroup);
+    svg.appendChild(labelGroup);
+
+    var angle = 0;
+    var callouts = [];
+
+    data.forEach(function (d, i) {
+      var sweep = (d.value / total) * 360;
+      var color = colorFor(d, i);
+      var gap = data.length > 1 ? Math.min(GAP_DEG, sweep * 0.3) : 0;
+      var start = angle + gap / 2;
+      var end = angle + sweep - gap / 2;
+      if (end - start < 0.4) end = start + 0.4; // keep hairline slices visible
+
+      var path = el("path", {
+        d: ringSectorPath(cx, cy, R_OUT, R_IN, start, end),
+        fill: color,
+        "class": "segment"
+      });
+      path.dataset.index = i;
+      segGroup.appendChild(path);
+
+      callouts.push({
+        i: i,
+        midAngle: angle + sweep / 2,
+        text: d.callout != null
+          ? String(d.callout)
+              .replace(/\{pct0\}/g, Math.round(d.value / total * 100))
+              .replace(/\{pct2\}/g, (d.value / total * 100).toFixed(2))
+              .replace(/\{pct\}/g, trimZero((d.value / total * 100).toFixed(1)))
+              .replace(/\{value\}/g, fmtCompact(d.value))
+              .replace(/\{name\}/g, d.name)
+          : fmtCompact(d.value),
+        name: d.name,
+        value: d.value,
+        pct: d.value / total * 100
+      });
+      angle += sweep;
     });
-    var categories = state.categoryOrder && state.categoryOrder.length
-      ? state.categoryOrder.filter(function (c) { return catSeen.indexOf(c) >= 0; })
-      : catSeen;
-    var seriesOrder = (state.seriesOrder && state.seriesOrder.length
-      ? state.seriesOrder : (CONFIG.seriesOrder || [])).slice();
-    serSeen.forEach(function (x) { if (seriesOrder.indexOf(x) < 0) seriesOrder.push(x); });
 
-    var maxV = 0;
-    data.forEach(function (d) { if (d.value > maxV) maxV = d.value; });
-    var scaleMax = state.maxValue != null && +state.maxValue > 0
-      ? +state.maxValue : maxV * 1.02;
-    if (scaleMax <= 0) scaleMax = 1;
+    // Centre text
+    var centerValue = el("text", {
+      x: cx, y: cy - 2, "text-anchor": "middle", "class": "center-value"
+    });
+    centerValue.textContent = state.centerValue != null
+      ? String(state.centerValue) : fmtFull(total);
+    svg.appendChild(centerValue);
 
-    var tooltip = document.getElementById("tooltip");
+    var centerLabel = el("text", {
+      x: cx, y: cy + 20, "text-anchor": "middle", "class": "center-label"
+    });
+    centerLabel.textContent = state.centerLabel;
+    svg.appendChild(centerLabel);
 
-    categories.forEach(function (cat) {
-      var group = document.createElement("div");
-      group.className = "group";
+    // Callouts float near their segments (Figma style), with per-side
+    // vertical de-overlap and clamping to the card edges
+    var left = [], right = [];
+    callouts.forEach(function (c) {
+      var a = ((c.midAngle % 360) + 360) % 360;
+      c.side = a < 180 ? "right" : "left";
+      (c.side === "right" ? right : left).push(c);
+    });
 
-      seriesOrder.forEach(function (ser, si) {
-        var cell = data.find(function (d) { return d.category === cat && d.series === ser; });
-        if (!cell) return;
-        var wrap = document.createElement("div");
-        wrap.className = "colwrap";
+    var AXIS_MIN = 24;   // minimum axis-aligned run leaving the ring
+    var DIAG_MIN = 12;   // minimum 45-degree diagonal arriving at the label
 
-        if (state.valueLabels !== "none") {
-          var vl = document.createElement("div");
-          vl.className = "col-value";
-          vl.textContent = state.valueLabels === "full"
-            ? fmtFull(cell.value) : fmtCompact(cell.value);
-          wrap.appendChild(vl);
-        }
-
-        var col = document.createElement("div");
-        col.className = "col";
-        col.style.height = Math.max(1.5, cell.value / scaleMax * 100) + "%";
-        col.style.background = colorFor(ser, si);
-
-        col.addEventListener("mousemove", function (ev) {
-          plot.classList.add("hovering");
-          col.classList.add("active");
-          tooltip.innerHTML = "<strong>" + escapeHtml(cat) + " · " + escapeHtml(ser) +
-            "</strong>&nbsp; " + fmtFull(cell.value);
-          tooltip.style.left = (ev.clientX + 12) + "px";
-          tooltip.style.top = (ev.clientY - 10) + "px";
-          tooltip.classList.add("show");
-        });
-        col.addEventListener("mouseleave", function () {
-          plot.classList.remove("hovering");
-          col.classList.remove("active");
-          tooltip.classList.remove("show");
-        });
-
-        wrap.appendChild(col);
-        group.appendChild(wrap);
+    function place(list, side) {
+      var out = side === "right" ? 1 : -1;
+      list.forEach(function (c) {
+        var A = polar(cx, cy, R_OUT + 4, c.midAngle);
+        c.ax = A.x; c.ay = A.y;
+        var p = polar(cx, cy, R_OUT + 30, c.midAngle);
+        c.px = p.x; c.py = p.y;
+        var a = ((c.midAngle % 360) + 360) % 360;
+        c.vertical = a < 25 || a > 335;
+        // vertical leaders need headroom above the ring for the axis run;
+        // clamp BEFORE stacking so the stack still separates the labels
+        c.ly = c.vertical
+          ? Math.min(p.y, c.ay - (AXIS_MIN * 0.6) - DIAG_MIN)
+          : p.y;
       });
 
-      plot.appendChild(group);
+      // Monotone vertical stacks (label order = anchor order: no crossings)
+      var minGap = 17;
+      var ups = list.filter(function (c) { return c.py < cy; })
+        .sort(function (a, b) { return b.py - a.py; });
+      ups.forEach(function (c, i) {
+        if (i === 0) return;
+        c.ly = Math.min(c.ly, ups[i - 1].ly - minGap);
+      });
+      if (ups.length) {
+        var topDeficit = 14 - ups[ups.length - 1].ly;
+        if (topDeficit > 0) ups.forEach(function (c) { c.ly += topDeficit; });
+      }
+      var downs = list.filter(function (c) { return c.py >= cy; })
+        .sort(function (a, b) { return a.py - b.py; });
+      downs.forEach(function (c, i) {
+        if (i === 0) return;
+        c.ly = Math.max(c.ly, downs[i - 1].ly + minGap);
+      });
+      if (downs.length) {
+        var botDeficit = downs[downs.length - 1].ly - (H - 24);
+        if (botDeficit > 0) downs.forEach(function (c) { c.ly -= botDeficit; });
+      }
 
-      var cl = document.createElement("div");
-      cl.className = "cat-label";
-      cl.textContent = cat;
-      cl.title = cat;
-      cats.appendChild(cl);
+      // Derive lx from the leader geometry so the bend is always visible
+      list.forEach(function (c) {
+        if (c.vertical) {
+          // vertical run up from the ring, then 45-degree diagonal to the label
+          c.lx = c.ax + out * DIAG_MIN;
+        } else {
+          // ensure a real diagonal, pointing away from the ring's middle
+          var dy = c.ly - c.ay;
+          if (Math.abs(dy) < DIAG_MIN) {
+            c.ly = c.ay + (c.py >= cy ? DIAG_MIN : -DIAG_MIN);
+            dy = c.ly - c.ay;
+          }
+          // horizontal run from the ring, then 45-degree diagonal to the label
+          c.lx = c.ax + out * (Math.abs(dy) + AXIS_MIN);
+        }
+        // keep inside the card
+        c.ly = Math.max(12, Math.min(H - 8, c.ly));
+        c.lx = side === "right" ? Math.min(c.lx, W - 44) : Math.max(c.lx, 44);
+      });
+    }
+    place(left, "left"); place(right, "right");
+
+    // Figma vector leaders: an axis-aligned run leaving the ring
+    // (vertical for top segments, horizontal otherwise) joined to a
+    // true 45-degree diagonal arriving at the label.
+    function leaderPoints(A, lx, ly, vertical) {
+      if (vertical) {
+        var dx = Math.abs(lx - A.x);
+        var By = ly + (ly < A.y ? dx : -dx);
+        // under crowding, shorten the axis run (diagonal steepens) but keep the bend
+        By = ly < A.y ? Math.min(By, A.y - 3) : Math.max(By, A.y + 3);
+        var hasRoom = ly < A.y ? (By > ly + 2) : (By < ly - 2);
+        if (hasRoom) return A.x + "," + A.y + " " + A.x + "," + By + " " + lx + "," + ly;
+      } else {
+        var dy = Math.abs(ly - A.y);
+        var Bx = lx + (lx < A.x ? dy : -dy);
+        Bx = lx < A.x ? Math.min(Bx, A.x - 3) : Math.max(Bx, A.x + 3);
+        var hasRoom2 = lx < A.x ? (Bx > lx + 2) : (Bx < lx - 2);
+        if (hasRoom2) return A.x + "," + A.y + " " + Bx + "," + A.y + " " + lx + "," + ly;
+      }
+      return A.x + "," + A.y + " " + lx + "," + ly;   // genuinely no room: single diagonal
+    }
+
+    if (state.showCallouts !== false) callouts.forEach(function (c) {
+      var A = polar(cx, cy, R_OUT + 4, c.midAngle);
+      var a = ((c.midAngle % 360) + 360) % 360;
+      var vertical = a < 25 || a > 335;               // top zone: vertical into the ring
+      var sOut = c.side === "right" ? 1 : -1;
+
+      if (vertical) {
+        // ensure a visible diagonal (min horizontal offset from the anchor)
+        if (Math.abs(c.lx - A.x) < 12) c.lx = A.x + sOut * 12;
+        // ensure a visible vertical run (label far enough above/below the ring)
+        var needY = Math.abs(c.lx - A.x) + 14;
+        if (c.py < cy && A.y - c.ly < needY) c.ly = A.y - needY;
+        if (c.py >= cy && c.ly - A.y < needY) c.ly = A.y + needY;
+      } else {
+        // ensure a visible diagonal (min vertical offset from the anchor)
+        if (Math.abs(c.ly - A.y) < 10) c.ly = A.y + (c.py < cy ? -10 : 10);
+        // ensure a visible horizontal run into the ring
+        var needX = Math.abs(c.ly - A.y) + 14;
+        if (Math.abs(c.lx - A.x) < needX) c.lx = A.x + sOut * needX;
+      }
+
+      var endX = c.side === "right" ? c.lx - 4 : c.lx + 4;
+      leaderGroup.appendChild(el("polyline", {
+        points: leaderPoints(A, endX, c.ly, vertical),
+        "class": "leader",
+        "stroke-linejoin": "round",
+        "stroke-linecap": "round"
+      }));
+      var t = el("text", {
+        x: c.side === "right" ? c.lx + 2 : c.lx - 2,
+        y: c.ly + 4,
+        "text-anchor": c.side === "right" ? "start" : "end",
+        "class": "callout-text"
+      });
+      t.textContent = c.text;
+      labelGroup.appendChild(t);
     });
 
-    // legend
-    if (state.showLegend !== false) {
-      seriesOrder.forEach(function (ser, si) {
-        if (serSeen.indexOf(ser) < 0) return;
+    // Legend
+    function legendText(d) {
+      var raw = d.legendValue != null
+        ? (typeof d.legendValue === "number" ? fmtFull(d.legendValue) : String(d.legendValue))
+        : fmtFull(d.value);
+      return raw
+        .replace(/\{pct0\}/g, Math.round(d.value / total * 100))
+        .replace(/\{pct2\}/g, (d.value / total * 100).toFixed(2))
+        .replace(/\{pct\}/g, trimZero((d.value / total * 100).toFixed(1)))
+        .replace(/\{value\}/g, fmtCompact(d.value))
+        .replace(/\{name\}/g, d.name);
+    }
+
+    legend.classList.toggle("table-style", state.legendStyle === "table");
+    if (state.legendStyle === "table") {
+      var lh = document.createElement("div");
+      lh.className = "legend-header";
+      lh.innerHTML = '<span>' + escapeHtml(state.legendTitle) + '</span><span>' +
+        escapeHtml(state.legendValueTitle) + '</span>';
+      legend.appendChild(lh);
+      data.forEach(function (d, i) {
         var item = document.createElement("div");
         item.className = "legend-item";
-        item.innerHTML = '<span class="legend-dot" style="background:' + colorFor(ser, si) + '"></span>' +
-          escapeHtml(ser);
+        item.innerHTML =
+          '<div class="legend-dot" style="background:' + colorFor(d, i) + '"></div>' +
+          '<div class="legend-tname">' + escapeHtml(d.name) + '</div>' +
+          '<div class="legend-tvalue">' + escapeHtml(legendText(d)) + '</div>';
         legend.appendChild(item);
       });
     } else {
-      legend.style.display = "none";
+      data.forEach(function (d, i) {
+        var item = document.createElement("div");
+        item.className = "legend-item";
+        item.innerHTML =
+          '<div class="legend-bar" style="background:' + colorFor(d, i) + '"></div>' +
+          '<div><div class="legend-value">' + escapeHtml(legendText(d)) + '</div>' +
+          '<div class="legend-name">' + escapeHtml(d.name) + '</div></div>';
+        legend.appendChild(item);
+      });
     }
+
+    attachHover(segGroup, callouts);
   }
 
-  // ---------- payload ----------
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  // ---------- Hover / tooltip ----------
+  function attachHover(segGroup, callouts) {
+    var tooltip = document.getElementById("tooltip");
+    segGroup.querySelectorAll(".segment").forEach(function (seg) {
+      seg.addEventListener("mousemove", function (ev) {
+        var c = callouts[+seg.dataset.index];
+        segGroup.classList.add("hovering");
+        seg.classList.add("active");
+        tooltip.innerHTML = "<strong>" + escapeHtml(c.name) + "</strong> &nbsp;" +
+          fmtFull(c.value) + " (" + c.pct.toFixed(2) + "%)";
+        tooltip.style.left = (ev.clientX + 12) + "px";
+        tooltip.style.top = (ev.clientY - 10) + "px";
+        tooltip.classList.add("show");
+      });
+      seg.addEventListener("mouseleave", function () {
+        segGroup.classList.remove("hovering");
+        seg.classList.remove("active");
+        tooltip.classList.remove("show");
+      });
+    });
+  }
+
+  // ---------- Data intake ----------
+  // A payload can override any of: title, centerLabel, legendField,
+  // valueField, data. Example:
+  //   {
+  //     "type": "chartData",
+  //     "title": "Estimated Reconstruction Cost Distribution",
+  //     "centerLabel": "Estimated Reconstruction Cost",
+  //     "legendField": "Event",
+  //     "valueField": "Total Estimated Reconstruction Cost",
+  //     "data": [ { "Event": "AGRN 1212", "Total Estimated Reconstruction Cost": 231459668 } ]
+  //   }
   function applyPayload(payload) {
     if (!payload) return;
     if (typeof payload === "string") {
@@ -561,29 +815,42 @@
     if (Array.isArray(payload)) {
       state.data = normalise(payload);
     } else {
-      if (payload.title)         state.title = String(payload.title);
-      if (payload.categoryField) state.categoryField = String(payload.categoryField);
-      if (payload.seriesField)   state.seriesField = String(payload.seriesField);
-      if (payload.valueField)    state.valueField = String(payload.valueField);
-      if (payload.currencySymbol !== undefined) state.currencySymbol = String(payload.currencySymbol);
-      if (payload.showLegend !== undefined)
-        state.showLegend = !(payload.showLegend === false || payload.showLegend === "false");
-      if (payload.legendPosition) state.legendPosition = String(payload.legendPosition);
-      if (payload.valueLabels)   state.valueLabels = String(payload.valueLabels);
-      if (payload.maxValue !== undefined) state.maxValue = payload.maxValue;
-      if (payload.seriesColors !== undefined) state.seriesColors = resolveSeriesColors(payload.seriesColors);
-      if (payload.seriesOrder !== undefined)  state.seriesOrder = resolveStringArray(payload.seriesOrder);
-      if (payload.categoryOrder !== undefined) state.categoryOrder = resolveStringArray(payload.categoryOrder);
-      if (payload.fontSizes !== undefined)  state.fontSizes = payload.fontSizes;
+      if (payload.title)       state.title = String(payload.title);
+      if (payload.centerLabel) state.centerLabel = String(payload.centerLabel);
+      if (payload.legendField) state.legendField = String(payload.legendField);
+      if (payload.valueField)  state.valueField = String(payload.valueField);
+      if (payload.centerValue !== undefined) state.centerValue = payload.centerValue;
+      if (payload.currencySymbol !== undefined) state.currencySymbol = payload.currencySymbol;
+      if (payload.showCallouts !== undefined)
+        state.showCallouts = !(payload.showCallouts === false || payload.showCallouts === "false");
+      if (payload.legendStyle) state.legendStyle = String(payload.legendStyle);
+      if (payload.legendTitle) state.legendTitle = String(payload.legendTitle);
+      if (payload.legendValueTitle) state.legendValueTitle = String(payload.legendValueTitle);
+      if (payload.fontSizes !== undefined) state.fontSizes = payload.fontSizes;
+      if (payload.seriesColors !== undefined)
+        state.seriesColors = resolveSeriesColors(payload.seriesColors);
       if (payload.background !== undefined) state.background = payload.background;
+      if (payload.colors !== undefined) {
+        state.colorsOverride = Array.isArray(payload.colors)
+          ? payload.colors.map(function (c) {
+              if (typeof c === "string") return c;
+              if (c && typeof c === "object") {
+                // Power Apps JSON() wraps single-column tables as {Value:"#hex"}
+                return c.Value || c.value || Object.values(c)[0];
+              }
+              return null;
+            }).filter(function (c) { return typeof c === "string" && c; })
+          : null;
+      }
       var dm = payload.darkMode != null ? payload.darkMode
              : payload.darkmode != null ? payload.darkmode : null;
       if (dm != null) state.darkMode = (dm === true || dm === "true" || dm === 1 || dm === "1");
-      if (payload.data) state.data = normalise(payload.data);
+      if (payload.data)        state.data = normalise(payload.data);
     }
     render();
   }
 
+  // 1) postMessage from Power Apps (PCF / iframe host)
   window.addEventListener("message", function (ev) {
     var msg = ev.data;
     if (msg == null) return;
@@ -594,18 +861,39 @@
     applyPayload(msg);
   });
 
+  // 2) URL query string:
+  //    ?title=...&centerLabel=...&legendField=Event&valueField=Cost&data=<urlencoded JSON>
+  function initFromQuery() {
+    try {
+      var q = new URLSearchParams(window.location.search);
+      var payload = {};
+      ["title", "centerLabel", "legendField", "valueField"].forEach(function (k) {
+        if (q.get(k)) payload[k] = q.get(k);
+      });
+      if (q.get("data")) payload.data = JSON.parse(q.get("data"));
+      if (Object.keys(payload).length) applyPayload(payload);
+    } catch (e) { /* ignore malformed query */ }
+  }
+
+  // 3) URL hash (PCF iframe pattern — Power Apps rebuilds the src with
+  //    "#" + EncodeUrl(JSON(payload)) to push new data):
+  //    https://.../index.html#%7B%22legendField%22%3A%22event%22...%7D
   function initFromHash() {
     try {
       var h = window.location.hash;
       if (!h || h.length < 2) return;
-      applyPayload(JSON.parse(decodeURIComponent(h.substring(1))));
-    } catch (e) { /* ignore */ }
+      var decoded = decodeURIComponent(h.substring(1));
+      applyPayload(JSON.parse(decoded));
+    } catch (e) { /* ignore malformed hash */ }
   }
   window.addEventListener("hashchange", initFromHash);
 
+  // 4) Direct JS API
   window.updateChart = applyPayload;
 
+  // Initial render from CONFIG
   state.data = normalise(CONFIG.data);
+  initFromQuery();
   initFromHash();
   render();
   window.addEventListener("resize", render);
