@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Donut Chart Template</title>
-<!-- DONUT_TEMPLATE_VERSION 14 (2026-07-06) -->
+<!-- DONUT_TEMPLATE_VERSION 15 (2026-07-07) -->
 <style>
   :root {
     --card-bg: #ffffff;          /* Menu/background */
@@ -49,7 +49,7 @@
   }
 
   .card-title {
-    font-size: 16px;
+    font-size: var(--fs-title, 16px);
     font-weight: 600;              /* SemiBold */
     color: #111827;                /* grey 900 */
     letter-spacing: .1px;
@@ -77,17 +77,17 @@
   svg { display: block; width: 100%; height: 100%; }
 
   .center-value {
-    font-size: 23px;
+    font-size: var(--fs-center-value, 23px);
     font-weight: 700;
     fill: var(--value-color);
   }
   .center-label {
-    font-size: 12px;
+    font-size: var(--fs-center-label, 12px);
     fill: var(--label-color);
   }
 
   .callout-text {
-    font-size: 15px;
+    font-size: var(--fs-callout, 15px);
     font-weight: 600;
     fill: var(--title-color);
   }
@@ -128,14 +128,14 @@
   }
 
   .legend-value {
-    font-size: 14.5px;
+    font-size: var(--fs-legend-value, 14.5px);
     font-weight: 700;
     color: var(--value-color);
     line-height: 1.3;
   }
 
   .legend-name {
-    font-size: 12px;
+    font-size: var(--fs-legend-name, 12px);
     color: var(--label-color);
     line-height: 1.3;
   }
@@ -164,7 +164,7 @@
   }
   .legend.table-style .legend-tname {
     flex: 1 1 auto;
-    font-size: 12.5px;
+    font-size: var(--fs-legend-name, 12.5px);
     color: var(--title-color);
     white-space: nowrap;
     overflow: hidden;
@@ -172,7 +172,7 @@
   }
   .legend.table-style .legend-tvalue {
     flex: 0 0 auto;
-    font-size: 12.5px;
+    font-size: var(--fs-legend-value, 12.5px);
     font-weight: 600;
     color: var(--value-color);
   }
@@ -251,7 +251,7 @@
 <script>
 (function () {
   "use strict";
-  console.log("DRFA donut chart DONUT_TEMPLATE_VERSION 14");
+  console.log("DRFA donut chart DONUT_TEMPLATE_VERSION 15");
 
   var loadingHidden = false;
   function hideLoading() {
@@ -282,12 +282,20 @@
     legendTitle: "Type",
     legendValueTitle: "%",
     darkMode: false,                      // true = dark theme
-    colors:     ["#17B751", "#93C5FD", "#FACC15", "#6366F1",
-                 "#F7630C", "#14B8A6", "#EF4444", "#5B03FF",
-                 "#0095FF", "#3EAC2E", "#F64E60", "#10B981"],
-    colorsDark: ["#17B751", "#93C5FD", "#FACC15", "#6366F1",
-                 "#F7630C", "#14B8A6", "#EF4444", "#5B03FF",
-                 "#0095FF", "#3EAC2E", "#F64E60", "#10B981"],
+    // Reserved category colours (exact name match, case-insensitive, trimmed)
+    seriesColors: {
+      "EW":     "rgba(59, 130, 246, 1)",   /* accent/blue-vibrant-3 #3B82F6 */
+      "IRW":    "rgba(20, 184, 166, 1)",   /* accent/teal #14B8A6 */
+      "EPAR":   "rgba(91, 3, 255, 1)",     /* accent/violet #5B03FF */
+      "EPA-RW": "rgba(91, 3, 255, 1)"
+    },
+    // Fallback rotation: Figma accent palette excluding the three reserved colours
+    colors:     ["#17B751", "#FACC15", "#F7630C", "#6366F1",
+                 "#EF4444", "#10B981", "#0095FF", "#F64E60",
+                 "#3EAC2E", "#118E3F", "#93C5FD", "#7125EB"],
+    colorsDark: ["#17B751", "#FACC15", "#F7630C", "#6366F1",
+                 "#EF4444", "#10B981", "#0095FF", "#F64E60",
+                 "#3EAC2E", "#118E3F", "#93C5FD", "#7125EB"],
 
     // Demo data — replaced when real data arrives from Power Apps
     data: [
@@ -309,14 +317,46 @@
     legendStyle: CONFIG.legendStyle,
     legendTitle: CONFIG.legendTitle,
     legendValueTitle: CONFIG.legendValueTitle,
+    fontSizes: null,   // {title, centerValue, centerLabel, callout, legendValue, legendName} in px
     currencySymbol: null,    // payload override; null = CONFIG value
     colorsOverride: null,    // payload override palette
+    seriesColors: null,      // payload name->colour map (or [{name,color}] table)
     data: []
   };
 
   function activeColors() {
     if (state.colorsOverride && state.colorsOverride.length) return state.colorsOverride;
     return state.darkMode ? CONFIG.colorsDark : CONFIG.colors;
+  }
+
+  function namedColor(name) {
+    var map = state.seriesColors || CONFIG.seriesColors;
+    if (!map || name == null) return null;
+    var key = String(name).trim().toLowerCase();
+    for (var k in map) {
+      if (String(k).trim().toLowerCase() === key) return map[k];
+    }
+    return null;
+  }
+
+  function colorFor(d, i) {
+    return namedColor(d.name) || activeColors()[i % activeColors().length];
+  }
+
+  function resolveSeriesColors(raw) {
+    if (!raw) return null;
+    if (Array.isArray(raw)) {
+      var m = {};
+      raw.forEach(function (item) {
+        if (!item || typeof item !== "object") return;
+        var n = getField(item, "name");
+        var c = getField(item, "color");
+        if (n != null && c != null) m[String(n).trim()] = String(c);
+      });
+      return Object.keys(m).length ? m : null;
+    }
+    if (typeof raw === "object") return raw;
+    return null;
   }
 
   function currency() {
@@ -412,6 +452,17 @@
   // ---------- Render ----------
   function render() {
     document.body.classList.toggle("dark", !!state.darkMode);
+    var fsMap = { title: "--fs-title", centerValue: "--fs-center-value",
+                  centerLabel: "--fs-center-label", callout: "--fs-callout",
+                  legendValue: "--fs-legend-value", legendName: "--fs-legend-name" };
+    for (var fk in fsMap) {
+      var fv = state.fontSizes ? getField(state.fontSizes, fk) : null;
+      if (fv != null && +fv > 0) {
+        document.documentElement.style.setProperty(fsMap[fk], (+fv) + "px");
+      } else {
+        document.documentElement.style.removeProperty(fsMap[fk]);
+      }
+    }
     var svg = document.getElementById("donutSvg");
     var legend = document.getElementById("legend");
     document.getElementById("chartTitle").textContent = state.title;
@@ -457,7 +508,7 @@
 
     data.forEach(function (d, i) {
       var sweep = (d.value / total) * 360;
-      var color = activeColors()[i % activeColors().length];
+      var color = colorFor(d, i);
       var gap = data.length > 1 ? Math.min(GAP_DEG, sweep * 0.3) : 0;
       var start = angle + gap / 2;
       var end = angle + sweep - gap / 2;
@@ -601,6 +652,23 @@
       var A = polar(cx, cy, R_OUT + 4, c.midAngle);
       var a = ((c.midAngle % 360) + 360) % 360;
       var vertical = a < 25 || a > 335;               // top zone: vertical into the ring
+      var sOut = c.side === "right" ? 1 : -1;
+
+      if (vertical) {
+        // ensure a visible diagonal (min horizontal offset from the anchor)
+        if (Math.abs(c.lx - A.x) < 12) c.lx = A.x + sOut * 12;
+        // ensure a visible vertical run (label far enough above/below the ring)
+        var needY = Math.abs(c.lx - A.x) + 14;
+        if (c.py < cy && A.y - c.ly < needY) c.ly = A.y - needY;
+        if (c.py >= cy && c.ly - A.y < needY) c.ly = A.y + needY;
+      } else {
+        // ensure a visible diagonal (min vertical offset from the anchor)
+        if (Math.abs(c.ly - A.y) < 10) c.ly = A.y + (c.py < cy ? -10 : 10);
+        // ensure a visible horizontal run into the ring
+        var needX = Math.abs(c.ly - A.y) + 14;
+        if (Math.abs(c.lx - A.x) < needX) c.lx = A.x + sOut * needX;
+      }
+
       var endX = c.side === "right" ? c.lx - 4 : c.lx + 4;
       leaderGroup.appendChild(el("polyline", {
         points: leaderPoints(A, endX, c.ly, vertical),
@@ -642,7 +710,7 @@
         var item = document.createElement("div");
         item.className = "legend-item";
         item.innerHTML =
-          '<div class="legend-dot" style="background:' + activeColors()[i % activeColors().length] + '"></div>' +
+          '<div class="legend-dot" style="background:' + colorFor(d, i) + '"></div>' +
           '<div class="legend-tname">' + escapeHtml(d.name) + '</div>' +
           '<div class="legend-tvalue">' + escapeHtml(legendText(d)) + '</div>';
         legend.appendChild(item);
@@ -652,7 +720,7 @@
         var item = document.createElement("div");
         item.className = "legend-item";
         item.innerHTML =
-          '<div class="legend-bar" style="background:' + activeColors()[i % activeColors().length] + '"></div>' +
+          '<div class="legend-bar" style="background:' + colorFor(d, i) + '"></div>' +
           '<div><div class="legend-value">' + escapeHtml(legendText(d)) + '</div>' +
           '<div class="legend-name">' + escapeHtml(d.name) + '</div></div>';
         legend.appendChild(item);
@@ -720,6 +788,9 @@
       if (payload.legendStyle) state.legendStyle = String(payload.legendStyle);
       if (payload.legendTitle) state.legendTitle = String(payload.legendTitle);
       if (payload.legendValueTitle) state.legendValueTitle = String(payload.legendValueTitle);
+      if (payload.fontSizes !== undefined) state.fontSizes = payload.fontSizes;
+      if (payload.seriesColors !== undefined)
+        state.seriesColors = resolveSeriesColors(payload.seriesColors);
       if (payload.colors !== undefined) {
         state.colorsOverride = Array.isArray(payload.colors)
           ? payload.colors.map(function (c) {
