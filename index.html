@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Donut Chart Template</title>
-<!-- DONUT_TEMPLATE_VERSION 15 (2026-07-07) -->
+<!-- DONUT_TEMPLATE_VERSION 16 (2026-07-07) -->
 <style>
   :root {
     --card-bg: #ffffff;          /* Menu/background */
@@ -251,7 +251,7 @@
 <script>
 (function () {
   "use strict";
-  console.log("DRFA donut chart DONUT_TEMPLATE_VERSION 15");
+  console.log("DRFA donut chart DONUT_TEMPLATE_VERSION 16");
 
   var loadingHidden = false;
   function hideLoading() {
@@ -321,6 +321,7 @@
     currencySymbol: null,    // payload override; null = CONFIG value
     colorsOverride: null,    // payload override palette
     seriesColors: null,      // payload name->colour map (or [{name,color}] table)
+    background: null,        // {light, dark, borderLight, borderDark} card colour overrides
     data: []
   };
 
@@ -452,6 +453,17 @@
   // ---------- Render ----------
   function render() {
     document.body.classList.toggle("dark", !!state.darkMode);
+    var bg = state.background || {};
+    var bgVal = state.darkMode
+      ? (getField(bg, "dark") || null)
+      : (getField(bg, "light") || null);
+    var borderVal = state.darkMode
+      ? (getField(bg, "borderDark") || null)
+      : (getField(bg, "borderLight") || null);
+    if (bgVal) document.documentElement.style.setProperty("--card-bg", String(bgVal));
+    else document.documentElement.style.removeProperty("--card-bg");
+    if (borderVal) document.documentElement.style.setProperty("--card-border", String(borderVal));
+    else document.documentElement.style.removeProperty("--card-border");
     var fsMap = { title: "--fs-title", centerValue: "--fs-center-value",
                   centerLabel: "--fs-center-label", callout: "--fs-callout",
                   legendValue: "--fs-legend-value", legendName: "--fs-legend-name" };
@@ -791,6 +803,7 @@
       if (payload.fontSizes !== undefined) state.fontSizes = payload.fontSizes;
       if (payload.seriesColors !== undefined)
         state.seriesColors = resolveSeriesColors(payload.seriesColors);
+      if (payload.background !== undefined) state.background = payload.background;
       if (payload.colors !== undefined) {
         state.colorsOverride = Array.isArray(payload.colors)
           ? payload.colors.map(function (c) {
