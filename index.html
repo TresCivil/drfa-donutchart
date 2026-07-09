@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Donut Chart Template</title>
-<!-- DONUT_TEMPLATE_VERSION 18 (2026-07-07) -->
+<!-- DONUT_TEMPLATE_VERSION 20 (2026-07-07) -->
 <style>
   :root {
     --card-bg: #ffffff;          /* Menu/background */
@@ -73,7 +73,6 @@
   }
   .chart-area.compact .donut-wrap {
     flex: 0 0 auto;
-    width: min(44%, 260px);
   }
   .chart-area.compact .legend {
     flex: 1 1 auto;
@@ -83,8 +82,9 @@
 
   .donut-wrap {
     flex: 0 1 auto;
-    width: min(62%, 430px);
     height: 100%;
+    aspect-ratio: 470 / 350;   /* set per-type at render time */
+    max-width: 62%;
     min-width: 0;
     display: flex;
     align-items: center;
@@ -183,10 +183,12 @@
     flex: 1 1 auto;
     font-size: var(--fs-legend-name, 12.5px);
     color: var(--title-color);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    line-height: 1.3;
+    min-width: 0;
   }
+  .legend.table-style .legend-item { align-items: flex-start; }
+  .legend.table-style .legend-dot { margin-top: 3px; }
   .legend.table-style .legend-tvalue {
     flex: 0 0 auto;
     font-size: var(--fs-legend-value, 12.5px);
@@ -268,7 +270,7 @@
 <script>
 (function () {
   "use strict";
-  console.log("DRFA donut chart DONUT_TEMPLATE_VERSION 18");
+  console.log("DRFA donut chart DONUT_TEMPLATE_VERSION 20");
 
   var loadingHidden = false;
   function hideLoading() {
@@ -519,9 +521,14 @@
     var total = data.reduce(function (s, d) { return s + d.value; }, 0);
 
     var compact = state.showCallouts === false;   // no callout gutters needed
-    var W = compact ? 290 : 470, H = compact ? 290 : 350;
-    var cx = W / 2, cy = compact ? H / 2 : H / 2 + 4;
-    var R_OUT = compact ? 132 : 122;   // outer radius (larger ring in compact)
+    // Same height and radius in both types => equal on-screen ring size.
+    // 0.80 of height is the largest ring type 1's callout labels allow;
+    // both types use it so side-by-side cards match.
+    var W = compact ? 350 : 470, H = 350;
+    var cx = W / 2, cy = H / 2;
+    var R_OUT = 140;
+    document.getElementById("donutSvg").parentNode.style.aspectRatio =
+      compact ? "1 / 1" : "470 / 350";
     var THICK = 34;          // ring thickness (thick, like the Figma ring)
     var R_IN = R_OUT - THICK;
     var GAP_DEG = 2;         // small flat gap between segments
