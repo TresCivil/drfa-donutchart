@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Donut Chart Template</title>
-<!-- DONUT_TEMPLATE_VERSION 16 (2026-07-07) -->
+<!-- DONUT_TEMPLATE_VERSION 18 (2026-07-07) -->
 <style>
   :root {
     --card-bg: #ffffff;          /* Menu/background */
@@ -61,12 +61,29 @@
     flex: 1 1 auto;
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: flex-start;
+    gap: 28px;
     min-height: 0;
   }
 
+  /* compact (no-callout) layout: donut and legend sit together, Figma type-2 style */
+  .chart-area.compact {
+    gap: 28px;
+    justify-content: flex-start;
+  }
+  .chart-area.compact .donut-wrap {
+    flex: 0 0 auto;
+    width: min(44%, 260px);
+  }
+  .chart-area.compact .legend {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 340px;
+  }
+
   .donut-wrap {
-    flex: 1 1 60%;
+    flex: 0 1 auto;
+    width: min(62%, 430px);
     height: 100%;
     min-width: 0;
     display: flex;
@@ -251,7 +268,7 @@
 <script>
 (function () {
   "use strict";
-  console.log("DRFA donut chart DONUT_TEMPLATE_VERSION 16");
+  console.log("DRFA donut chart DONUT_TEMPLATE_VERSION 18");
 
   var loadingHidden = false;
   function hideLoading() {
@@ -482,6 +499,7 @@
     legend.innerHTML = "";
 
     var chartArea = document.getElementById("chartArea");
+    chartArea.classList.toggle("compact", state.showCallouts === false);
     var oldEmpty = document.querySelector(".empty-state");
     if (oldEmpty) oldEmpty.remove();
     chartArea.style.display = "flex";
@@ -500,9 +518,10 @@
 
     var total = data.reduce(function (s, d) { return s + d.value; }, 0);
 
-    var W = 470, H = 350;
-    var cx = W / 2, cy = H / 2 + 4;
-    var R_OUT = 122;         // outer radius
+    var compact = state.showCallouts === false;   // no callout gutters needed
+    var W = compact ? 290 : 470, H = compact ? 290 : 350;
+    var cx = W / 2, cy = compact ? H / 2 : H / 2 + 4;
+    var R_OUT = compact ? 132 : 122;   // outer radius (larger ring in compact)
     var THICK = 34;          // ring thickness (thick, like the Figma ring)
     var R_IN = R_OUT - THICK;
     var GAP_DEG = 2;         // small flat gap between segments
